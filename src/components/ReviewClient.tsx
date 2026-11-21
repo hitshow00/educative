@@ -16,12 +16,16 @@ import {
   loadProgress,
   setSelectedLevel,
 } from '@/lib/progress';
+import { useLanguage } from '@/components/LanguageProvider';
+import { LEVEL_AR, translateSubject } from '@/lib/i18n';
+import { getLocalizedStage } from '@/lib/stage-translations-ar';
 
 interface ReviewClientProps {
   quizzes: Quiz[];
 }
 
 export function ReviewClient({ quizzes }: ReviewClientProps) {
+  const { lang, t } = useLanguage();
   const [store, setStore] = useState<ProgressStore>(getDefaultStore);
 
   useEffect(() => {
@@ -63,14 +67,16 @@ export function ReviewClient({ quizzes }: ReviewClientProps) {
   const isAllMastered =
     priorityGroups.weak.length === 0 && priorityGroups.untried.length === 0;
 
+  const activeLvlLabel =
+    lang === 'ar' ? LEVEL_AR[activeLevelInfo.id].label : activeLevelInfo.label;
+
   return (
     <main className="max-w-5xl mx-auto px-4 py-6 sm:py-10 space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900">À revoir en priorité</h1>
+          <h1 className="text-2xl font-extrabold text-slate-900">{t.revTitle}</h1>
           <p className="text-sm text-slate-500">
-            Concentre tes révisions sur les chapitres &lt; 12/20 et ceux pas encore tentés (
-            {activeLevelInfo.label}).
+            {t.revSub} ({activeLvlLabel}).
           </p>
         </div>
 
@@ -86,7 +92,7 @@ export function ReviewClient({ quizzes }: ReviewClientProps) {
                   : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
               }`}
             >
-              {lvl.shortLabel}
+              {lang === 'ar' ? LEVEL_AR[lvl.id].shortLabel : lvl.shortLabel}
             </button>
           ))}
         </div>
@@ -95,49 +101,58 @@ export function ReviewClient({ quizzes }: ReviewClientProps) {
       {isAllMastered ? (
         <section className="bg-emerald-50 border border-emerald-200 rounded-2xl p-8 text-center space-y-3">
           <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto" />
-          <h2 className="text-lg font-extrabold text-emerald-950">
-            Bravo ! Tous les chapitres de {activeLevelInfo.label} sont au-dessus de 12/20 !
-          </h2>
-          <p className="text-sm text-emerald-800">
-            Continue en mode Examen Blanc pour viser la mention Très Bien.
-          </p>
+          <h2 className="text-lg font-extrabold text-emerald-950">{t.revAllGoodTitle}</h2>
+          <p className="text-sm text-emerald-800">{t.revAllGoodSub}</p>
           <Link
             href="/"
             className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-semibold px-5 py-2.5 transition-colors"
           >
-            <span>Revoir le catalogue</span>
-            <ArrowRight className="w-4 h-4" />
+            <span>{t.revBackCatalog}</span>
+            <ArrowRight className="w-4 h-4 rtl:rotate-180" />
           </Link>
         </section>
       ) : (
         <div className="space-y-8">
-          {/* 1. Chapitres sous 12/20 */}
           {priorityGroups.weak.length > 0 && (
             <section className="space-y-3">
               <h2 className="text-sm font-bold uppercase tracking-wider text-red-700 flex items-center gap-1.5">
                 <Target className="w-4 h-4" />
-                <span>Priorité haute — Note inférieure à 12/20 ({priorityGroups.weak.length})</span>
+                <span>
+                  {t.revHighPriority} ({priorityGroups.weak.length})
+                </span>
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {priorityGroups.weak.map((quiz) => {
                   const rec = store.records[quiz.slug];
                   const style = getSubjectStyle(quiz.subject);
+                  const loc = getLocalizedStage(
+                    quiz.slug,
+                    { title: quiz.chapter_title, desc: quiz.description },
+                    lang
+                  );
+
                   return (
                     <div
                       key={quiz.slug}
-                      className="bg-white rounded-2xl border border-red-200 border-l-4 border-l-red-500 p-5 flex flex-col justify-between gap-4"
+                      className="bg-white rounded-2xl border border-red-200 border-s-4 border-s-red-500 p-5 flex flex-col justify-between gap-4"
                     >
                       <div className="space-y-2">
                         <div className="flex items-center justify-between gap-2">
-                          <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${style.bg} ${style.text}`}>
-                            {quiz.subject}
+                          <span
+                            className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${style.bg} ${style.text}`}
+                          >
+                            {t.levelPrefix} {quiz.stage_number} •{' '}
+                            {translateSubject(quiz.subject, lang)}
                           </span>
-                          <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-red-50 text-red-700">
-                            Meilleure note : {formatScore20(rec.bestScore20)}/20
+                          <span
+                            dir="ltr"
+                            className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-red-50 text-red-700"
+                          >
+                            {formatScore20(rec.bestScore20)}/20
                           </span>
                         </div>
-                        <h3 className="text-base font-bold text-slate-900">{quiz.chapter_title}</h3>
-                        <p className="text-xs text-slate-600">{quiz.description}</p>
+                        <h3 className="text-base font-bold text-slate-900">{loc.title}</h3>
+                        <p className="text-xs text-slate-600">{loc.desc}</p>
                       </div>
 
                       <Link
@@ -145,7 +160,7 @@ export function ReviewClient({ quizzes }: ReviewClientProps) {
                         className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-semibold py-2.5 px-4 transition-colors"
                       >
                         <RotateCcw className="w-4 h-4" />
-                        <span>Réviser ce chapitre maintenant</span>
+                        <span>{t.revReviewNow}</span>
                       </Link>
                     </div>
                   );
@@ -154,15 +169,20 @@ export function ReviewClient({ quizzes }: ReviewClientProps) {
             </section>
           )}
 
-          {/* 2. Chapitres pas encore tentés */}
           {priorityGroups.untried.length > 0 && (
             <section className="space-y-3">
               <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500">
-                Pas encore tentés ({priorityGroups.untried.length})
+                {t.revUntried} ({priorityGroups.untried.length})
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {priorityGroups.untried.map((quiz) => {
                   const style = getSubjectStyle(quiz.subject);
+                  const loc = getLocalizedStage(
+                    quiz.slug,
+                    { title: quiz.chapter_title, desc: quiz.description },
+                    lang
+                  );
+
                   return (
                     <div
                       key={quiz.slug}
@@ -170,23 +190,26 @@ export function ReviewClient({ quizzes }: ReviewClientProps) {
                     >
                       <div className="space-y-2">
                         <div className="flex items-center justify-between gap-2">
-                          <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${style.bg} ${style.text}`}>
-                            {quiz.subject}
+                          <span
+                            className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${style.bg} ${style.text}`}
+                          >
+                            {t.levelPrefix} {quiz.stage_number} •{' '}
+                            {translateSubject(quiz.subject, lang)}
                           </span>
                           <span className="text-xs font-semibold text-slate-400">
                             {quiz.questions.length} QCM
                           </span>
                         </div>
-                        <h3 className="text-base font-bold text-slate-900">{quiz.chapter_title}</h3>
-                        <p className="text-xs text-slate-600">{quiz.description}</p>
+                        <h3 className="text-base font-bold text-slate-900">{loc.title}</h3>
+                        <p className="text-xs text-slate-600">{loc.desc}</p>
                       </div>
 
                       <Link
                         href={`/quiz/${quiz.slug}`}
                         className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 hover:bg-indigo-600 text-white text-xs sm:text-sm font-semibold py-2.5 px-4 transition-colors"
                       >
-                        <span>Tester mes connaissances</span>
-                        <ArrowRight className="w-4 h-4" />
+                        <span>{t.revTestMe}</span>
+                        <ArrowRight className="w-4 h-4 rtl:rotate-180" />
                       </Link>
                     </div>
                   );

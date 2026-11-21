@@ -31,6 +31,9 @@ import {
 } from '@/lib/progress';
 import { playCorrectSound, playVictorySound, playWrongSound } from '@/lib/sound';
 import { createClient } from '@/utils/supabase/client';
+import { useLanguage } from '@/components/LanguageProvider';
+import { translateMention, translateSubject } from '@/lib/i18n';
+import { getLocalizedStage } from '@/lib/stage-translations-ar';
 
 const LETTERS = ['A', 'B', 'C', 'D'];
 
@@ -40,9 +43,20 @@ interface QuizPlayerProps {
 }
 
 export function QuizPlayer({ quiz, nextStage }: QuizPlayerProps) {
+  const { lang, t } = useLanguage();
   const supabase = useMemo(() => createClient(), []);
   const style = getSubjectStyle(quiz.subject);
   const isBoss = quiz.stage_number === 10;
+
+  const locStage = getLocalizedStage(
+    quiz.slug,
+    {
+      title: quiz.chapter_title,
+      desc: quiz.description,
+      source: quiz.exam_source,
+    },
+    lang
+  );
 
   const [mode, setMode] = useState<QuizMode>(isBoss ? 'exam' : 'training');
   const [activeQuestions, setActiveQuestions] = useState<QuizQuestion[]>(quiz.questions);
@@ -60,7 +74,6 @@ export function QuizPlayer({ quiz, nextStage }: QuizPlayerProps) {
   const [unlockedNext, setUnlockedNext] = useState(false);
   const [wrongIndices, setWrongIndices] = useState<number[]>([]);
 
-  // Chronomètre
   useEffect(() => {
     if (finished) return;
     const id = setInterval(() => setSeconds((s) => s + 1), 1000);
@@ -105,7 +118,6 @@ export function QuizPlayer({ quiz, nextStage }: QuizPlayerProps) {
         playVictorySound(res.store.soundEnabled);
       }
 
-      // Synchronisation cloud silencieuse si l'élève est connecté
       try {
         const {
           data: { user },
@@ -170,7 +182,6 @@ export function QuizPlayer({ quiz, nextStage }: QuizPlayerProps) {
     }
   }, [activeQuestions.length, answers, finishQuiz, index]);
 
-  // Raccourcis clavier (A, B, C, D et Entrée)
   useEffect(() => {
     if (finished) return;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -213,7 +224,8 @@ export function QuizPlayer({ quiz, nextStage }: QuizPlayerProps) {
     const total = activeQuestions.length;
     const correctCount = total - wrongIndices.length;
     const pct = Math.round((correctCount / total) * 100);
-    const mention = getMentionMaroc(finalScore20);
+    const mentionStyle = getMentionMaroc(finalScore20);
+    const mentionLabel = translateMention(finalScore20, lang);
     const canGoNextStage = Boolean(nextStage && finalScore20 >= 10);
 
     return (
@@ -221,18 +233,18 @@ export function QuizPlayer({ quiz, nextStage }: QuizPlayerProps) {
         <section className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 text-center space-y-6">
           <div className="space-y-2">
             <span className={`inline-block text-xs font-bold px-3 py-1 rounded-full ${style.bg} ${style.text}`}>
-              Niveau {quiz.stage_number} • {quiz.subject} — {quiz.chapter_title}
+              {t.levelPrefix} {quiz.stage_number} • {translateSubject(quiz.subject, lang)} —{' '}
+              {locStage.title}
             </span>
             <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900">
               {isBoss && finalScore20 >= 12
-                ? '🏆 Boss Examen Vaincu !'
+                ? t.qBossWon
                 : finalScore20 >= 10
-                ? 'Niveau Validé !'
-                : 'Continue ton entraînement !'}
+                ? t.qLevelPassed
+                : t.qKeepTrying}
             </h1>
           </div>
 
-          {/* 3 Étoiles dorées */}
           <div className="flex items-center justify-center gap-2">
             {[1, 2, 3].map((n) => (
               <Star
@@ -246,73 +258,76 @@ export function QuizPlayer({ quiz, nextStage }: QuizPlayerProps) {
             ))}
           </div>
 
-          {/* Bannières récompenses (Niveau débloqué / Défi du jour) */}
           <div className="flex flex-wrap items-center justify-center gap-2">
             {unlockedNext && nextStage && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3.5 py-1 text-xs font-bold text-emerald-700">
                 <Unlock className="w-3.5 h-3.5" />
-                Niveau {nextStage.stage_number} débloqué !
+                {t.qUnlockedNextBefore} {nextStage.stage_number} {t.qUnlockedNextAfter}
               </span>
             )}
             {dailyBonus && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 border border-indigo-200 px-3.5 py-1 text-xs font-bold text-indigo-700">
                 <Sparkles className="w-3.5 h-3.5" />
-                Défi du jour réussi : +100 XP bonus !
+                {t.qDailyBonusWon}
               </span>
             )}
           </div>
 
           <div className="rounded-2xl bg-slate-50 border border-slate-200 p-6 space-y-3">
             <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Ta note sur 20
+              {t.qYourScore20}
             </p>
-            <p className="text-5xl font-extrabold text-slate-900 tabular-nums">
+            <p className="text-5xl font-extrabold text-slate-900 tabular-nums" dir="ltr">
               {formatScore20(finalScore20)}{' '}
               <span className="text-2xl text-slate-400 font-bold">/ 20</span>
             </p>
             <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
               <span
-                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold ${mention.color}`}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold ${mentionStyle.color}`}
               >
                 <Award className="w-3.5 h-3.5" />
-                {mention.label}
+                {mentionLabel}
               </span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 border border-indigo-200 px-3 py-1 text-xs font-bold text-indigo-700">
+              <span
+                dir="ltr"
+                className="inline-flex items-center gap-1 rounded-full bg-indigo-50 border border-indigo-200 px-3 py-1 text-xs font-bold text-indigo-700"
+              >
                 <Sparkles className="w-3.5 h-3.5" />+{xpEarned} XP
               </span>
             </div>
 
             <div className="grid grid-cols-3 gap-2 pt-4 mt-4 border-t border-slate-200 text-xs">
               <div>
-                <p className="text-slate-500">Réussite</p>
-                <p className="text-sm font-bold text-slate-900 mt-0.5">
+                <p className="text-slate-500">{t.qSuccess}</p>
+                <p className="text-sm font-bold text-slate-900 mt-0.5" dir="ltr">
                   {correctCount}/{total} ({pct}%)
                 </p>
               </div>
               <div>
-                <p className="text-slate-500">Temps</p>
-                <p className="text-sm font-bold text-slate-900 mt-0.5 tabular-nums">
+                <p className="text-slate-500">{t.qTime}</p>
+                <p className="text-sm font-bold text-slate-900 mt-0.5 tabular-nums" dir="ltr">
                   {formatDuration(seconds)}
                 </p>
               </div>
               <div>
-                <p className="text-slate-500">Combo max</p>
+                <p className="text-slate-500">{t.qMaxCombo}</p>
                 <p className="text-sm font-bold text-slate-900 mt-0.5">
-                  {bestCombo > 0 ? `${bestCombo} d’affilée` : '—'}
+                  {bestCombo > 0 ? `${bestCombo} ${t.qInARow}` : '—'}
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Boutons d'action */}
           <div className="flex flex-col sm:flex-row flex-wrap gap-3 justify-center">
             {canGoNextStage && nextStage && (
               <Link
                 href={`/quiz/${nextStage.slug}`}
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm px-6 py-3 transition-colors shadow-sm"
               >
-                <span>Passer au Niveau {nextStage.stage_number}</span>
-                <ArrowRight className="w-4 h-4" />
+                <span>
+                  {t.qGoNextLevel} {nextStage.stage_number}
+                </span>
+                <ArrowRight className="w-4 h-4 rtl:rotate-180" />
               </Link>
             )}
 
@@ -323,7 +338,9 @@ export function QuizPlayer({ quiz, nextStage }: QuizPlayerProps) {
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-sm px-5 py-3 transition-colors"
               >
                 <RotateCcw className="w-4 h-4" />
-                <span>Refaire mes {wrongIndices.length} erreur{wrongIndices.length > 1 ? 's' : ''}</span>
+                <span>
+                  {t.qRetryErrorsBefore} {wrongIndices.length} {t.qRetryErrorsAfter}
+                </span>
               </button>
             )}
 
@@ -333,7 +350,7 @@ export function QuizPlayer({ quiz, nextStage }: QuizPlayerProps) {
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm px-5 py-3 transition-colors"
             >
               <RotateCcw className="w-4 h-4" />
-              <span>Rejouer</span>
+              <span>{t.qReplay}</span>
             </button>
 
             <Link
@@ -341,7 +358,7 @@ export function QuizPlayer({ quiz, nextStage }: QuizPlayerProps) {
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm px-5 py-3 transition-colors"
             >
               <Trophy className="w-4 h-4 text-amber-500" />
-              <span>Voir mon rang</span>
+              <span>{t.qSeeMyRank}</span>
             </Link>
           </div>
         </section>
@@ -349,7 +366,7 @@ export function QuizPlayer({ quiz, nextStage }: QuizPlayerProps) {
         {/* Correction détaillée */}
         <section className="space-y-3">
           <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500">
-            Correction détaillée ({total} questions)
+            {t.qDetailedCorrection} ({total})
           </h2>
 
           {activeQuestions.map((q, idx) => {
@@ -370,7 +387,7 @@ export function QuizPlayer({ quiz, nextStage }: QuizPlayerProps) {
                         📄 {q.exam_source}
                       </span>
                     )}
-                    <p className="text-sm font-bold text-slate-900">
+                    <p className="text-sm font-bold text-slate-900" dir="ltr">
                       {idx + 1}. {q.question_text}
                     </p>
                   </div>
@@ -383,20 +400,22 @@ export function QuizPlayer({ quiz, nextStage }: QuizPlayerProps) {
 
                 {!isRight && userAns !== undefined && (
                   <p className="text-xs text-red-700 bg-red-50 rounded-lg px-3 py-1.5">
-                    Ta réponse : <strong>{q.options[userAns]}</strong>
+                    {t.qYourAnswer} <strong dir="ltr">{q.options[userAns]}</strong>
                   </p>
                 )}
 
                 <p className="text-xs text-emerald-800 bg-emerald-50 rounded-lg px-3 py-1.5">
-                  Bonne réponse : <strong>{q.options[q.correct_index]}</strong>
+                  {t.qCorrectAnswer} <strong dir="ltr">{q.options[q.correct_index]}</strong>
                 </p>
 
-                <p className="text-xs text-slate-600 leading-relaxed">{q.explanation}</p>
+                <p className="text-xs text-slate-600 leading-relaxed" dir="ltr">
+                  {q.explanation}
+                </p>
                 {q.exam_tip && (
                   <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 flex items-start gap-2">
                     <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                     <span>
-                      <strong>Piège d’examen :</strong> {q.exam_tip}
+                      <strong>{t.qExamTip}</strong> <span dir="ltr">{q.exam_tip}</span>
                     </span>
                   </p>
                 )}
@@ -415,14 +434,13 @@ export function QuizPlayer({ quiz, nextStage }: QuizPlayerProps) {
 
   return (
     <main className="max-w-3xl mx-auto px-4 py-6 sm:py-8 space-y-5">
-      {/* Barre retour + Sélecteur de Mode */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href="/"
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900"
         >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Retour au parcours 10 niveaux</span>
+          <ArrowLeft className="w-4 h-4 rtl:rotate-180" />
+          <span>{t.qBackTrack}</span>
         </Link>
 
         {index === 0 && Object.keys(answers).length === 0 && mode !== 'mistakes' && (
@@ -435,7 +453,7 @@ export function QuizPlayer({ quiz, nextStage }: QuizPlayerProps) {
               }`}
             >
               <BookOpen className="w-3.5 h-3.5" />
-              <span>Entraînement</span>
+              <span>{t.qModeTraining}</span>
             </button>
             <button
               type="button"
@@ -445,15 +463,13 @@ export function QuizPlayer({ quiz, nextStage }: QuizPlayerProps) {
               }`}
             >
               <Timer className="w-3.5 h-3.5" />
-              <span>Examen Blanc</span>
+              <span>{t.qModeExam}</span>
             </button>
           </div>
         )}
       </div>
 
-      {/* Carte Principale du Quiz */}
       <section className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-7 space-y-6">
-        {/* En-tête progression + chrono + combo */}
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2">
@@ -463,10 +479,10 @@ export function QuizPlayer({ quiz, nextStage }: QuizPlayerProps) {
                 }`}
               >
                 {isBoss && <Crown className="w-3.5 h-3.5" />}
-                Niv. {quiz.stage_number} • {quiz.subject}
+                {t.levelPrefix} {quiz.stage_number} • {translateSubject(quiz.subject, lang)}
               </span>
               <span className="text-xs font-semibold text-slate-500">
-                Question {index + 1} / {total}
+                {t.qQuestion} {index + 1} / {total}
               </span>
             </div>
 
@@ -474,10 +490,13 @@ export function QuizPlayer({ quiz, nextStage }: QuizPlayerProps) {
               {combo >= 2 && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2.5 py-0.5 text-xs font-extrabold text-amber-700 animate-pulse">
                   <Flame className="w-3.5 h-3.5" />
-                  Combo x{combo}
+                  {t.qCombo} x{combo}
                 </span>
               )}
-              <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700 tabular-nums">
+              <span
+                dir="ltr"
+                className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700 tabular-nums"
+              >
                 <Clock className="w-3.5 h-3.5" />
                 {formatDuration(seconds)}
               </span>
@@ -492,23 +511,24 @@ export function QuizPlayer({ quiz, nextStage }: QuizPlayerProps) {
           </div>
         </div>
 
-        {/* Source officielle + Énoncé */}
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-xs font-semibold text-slate-400">{quiz.chapter_title}</p>
-            {(currentQuestion.exam_source || quiz.exam_source) && (
+            <p className="text-xs font-semibold text-slate-400">{locStage.title}</p>
+            {(currentQuestion.exam_source || locStage.source) && (
               <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100">
-                📄 {currentQuestion.exam_source || quiz.exam_source}
+                📄 {currentQuestion.exam_source || locStage.source}
               </span>
             )}
           </div>
-          <h1 className="text-lg sm:text-xl font-bold text-slate-900 leading-snug">
+          {lang === 'ar' && (
+            <p className="text-[11px] text-slate-400">{t.qBiofNote}</p>
+          )}
+          <h1 className="text-lg sm:text-xl font-bold text-slate-900 leading-snug" dir="ltr">
             {currentQuestion.question_text}
           </h1>
         </div>
 
-        {/* 4 Choix de réponses */}
-        <div className="space-y-2.5">
+        <div className="space-y-2.5" dir="ltr">
           {currentQuestion.options.map((opt, optIdx) => {
             const isSelected = chosenOption === optIdx;
             const isCorrect = optIdx === currentQuestion.correct_index;
@@ -551,39 +571,38 @@ export function QuizPlayer({ quiz, nextStage }: QuizPlayerProps) {
           })}
         </div>
 
-        {/* Encadré Explication + Piège d'examen */}
         {(mode === 'training' || mode === 'mistakes') && isLocked && (
           <div className="space-y-3 pt-1">
-            <div className="rounded-xl bg-slate-50 border border-slate-200 border-l-4 border-l-indigo-600 p-4 text-sm text-slate-700 space-y-1">
+            <div className="rounded-xl bg-slate-50 border border-slate-200 border-s-4 border-s-indigo-600 p-4 text-sm text-slate-700 space-y-1">
               <p className="font-bold text-slate-900 flex items-center gap-1.5">
                 <Lightbulb className="w-4 h-4 text-indigo-600" />
-                <span>Explication</span>
+                <span>{t.qExplanation}</span>
               </p>
-              <p className="leading-relaxed">{currentQuestion.explanation}</p>
+              <p className="leading-relaxed" dir="ltr">
+                {currentQuestion.explanation}
+              </p>
             </div>
 
             {currentQuestion.exam_tip && (
               <div className="rounded-xl bg-amber-50 border border-amber-200 p-3.5 text-xs sm:text-sm text-amber-900 flex items-start gap-2">
                 <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                 <span>
-                  <strong>Piège fréquent à l’examen :</strong> {currentQuestion.exam_tip}
+                  <strong>{t.qExamTip}</strong>{' '}
+                  <span dir="ltr">{currentQuestion.exam_tip}</span>
                 </span>
               </div>
             )}
           </div>
         )}
 
-        {/* Bouton Suivant */}
         {canGoNext && (
           <button
             type="button"
             onClick={handleNext}
             className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 hover:bg-indigo-600 text-white font-bold text-sm sm:text-base py-3.5 px-5 transition-colors"
           >
-            <span>
-              {index < total - 1 ? 'Question suivante' : 'Terminer et voir mon score / 20'}
-            </span>
-            <ArrowRight className="w-4 h-4" />
+            <span>{index < total - 1 ? t.qNextQuestion : t.qFinishScore}</span>
+            <ArrowRight className="w-4 h-4 rtl:rotate-180" />
           </button>
         )}
       </section>

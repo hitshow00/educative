@@ -27,12 +27,16 @@ import {
   resetAllProgress,
   setSelectedLevel,
 } from '@/lib/progress';
+import { useLanguage } from '@/components/LanguageProvider';
+import { LEVEL_AR, translateSubject } from '@/lib/i18n';
+import { getLocalizedStage } from '@/lib/stage-translations-ar';
 
 interface ProgressionClientProps {
   quizzes: Quiz[];
 }
 
 export function ProgressionClient({ quizzes }: ProgressionClientProps) {
+  const { lang, t } = useLanguage();
   const [store, setStore] = useState<ProgressStore>(getDefaultStore);
 
   useEffect(() => {
@@ -107,22 +111,23 @@ export function ProgressionClient({ quizzes }: ProgressionClientProps) {
   }
 
   function handleReset() {
-    const ok = window.confirm(
-      'Réinitialiser toute votre progression enregistrée sur cet appareil ?'
-    );
-    if (ok) {
+    if (window.confirm(t.progResetConfirm)) {
       setStore(resetAllProgress());
     }
   }
 
+  const activeLvlLabel =
+    lang === 'ar' ? LEVEL_AR[activeLevelInfo.id].label : activeLevelInfo.label;
+  const activeLvlExam =
+    lang === 'ar' ? LEVEL_AR[activeLevelInfo.id].examTitle : activeLevelInfo.examTitle;
+
   return (
     <main className="max-w-5xl mx-auto px-4 py-6 sm:py-10 space-y-8">
-      {/* En-tête + Sélecteur de niveau */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900">Tableau de Progression</h1>
+          <h1 className="text-2xl font-extrabold text-slate-900">{t.progTitle}</h1>
           <p className="text-sm text-slate-500">
-            Suis ton niveau de préparation — {activeLevelInfo.label} ({activeLevelInfo.examTitle})
+            {t.progSub} — {activeLvlLabel} ({activeLvlExam})
           </p>
         </div>
 
@@ -138,7 +143,7 @@ export function ProgressionClient({ quizzes }: ProgressionClientProps) {
                   : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
               }`}
             >
-              {lvl.shortLabel}
+              {lang === 'ar' ? LEVEL_AR[lvl.id].shortLabel : lvl.shortLabel}
             </button>
           ))}
         </div>
@@ -149,9 +154,9 @@ export function ProgressionClient({ quizzes }: ProgressionClientProps) {
         <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-1">
           <div className="flex items-center gap-1.5 text-xs text-slate-500">
             <Award className="w-4 h-4 text-indigo-600" />
-            <span>Note estimée</span>
+            <span>{t.progEstScore}</span>
           </div>
-          <p className="text-2xl font-extrabold text-slate-900 tabular-nums">
+          <p className="text-2xl font-extrabold text-slate-900 tabular-nums" dir="ltr">
             {stats.avg20 === null ? '— / 20' : `${formatScore20(stats.avg20)} / 20`}
           </p>
         </div>
@@ -159,9 +164,9 @@ export function ProgressionClient({ quizzes }: ProgressionClientProps) {
         <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-1">
           <div className="flex items-center gap-1.5 text-xs text-slate-500">
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            <span>Quiz complétés</span>
+            <span>{t.progCompleted}</span>
           </div>
-          <p className="text-2xl font-extrabold text-slate-900 tabular-nums">
+          <p className="text-2xl font-extrabold text-slate-900 tabular-nums" dir="ltr">
             {stats.completed} / {stats.total}
           </p>
         </div>
@@ -169,33 +174,37 @@ export function ProgressionClient({ quizzes }: ProgressionClientProps) {
         <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-1">
           <div className="flex items-center gap-1.5 text-xs text-slate-500">
             <Flame className="w-4 h-4 text-amber-600" />
-            <span>Série active</span>
+            <span>{t.progStreak}</span>
           </div>
           <p className="text-2xl font-extrabold text-slate-900 tabular-nums">
-            {stats.streak} jour{stats.streak > 1 ? 's' : ''}
+            {stats.streak} {stats.streak > 1 ? t.daysLabel : t.dayLabel}
           </p>
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-1">
           <div className="flex items-center gap-1.5 text-xs text-slate-500">
             <Sparkles className="w-4 h-4 text-violet-600" />
-            <span>Points XP</span>
+            <span>{t.progXp}</span>
           </div>
-          <p className="text-2xl font-extrabold text-slate-900 tabular-nums">{store.xp} XP</p>
+          <p className="text-2xl font-extrabold text-slate-900 tabular-nums" dir="ltr">
+            {store.xp} XP
+          </p>
         </div>
       </section>
 
       {/* Maîtrise par matière */}
       <section className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-bold text-slate-900">Maîtrise par matière</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-base font-bold text-slate-900">{t.progMastery}</h2>
           {stats.priority > 0 && (
             <Link
               href="/a-revoir"
               className="inline-flex items-center gap-1 text-xs font-semibold text-red-700 hover:underline"
             >
               <Target className="w-3.5 h-3.5" />
-              <span>{stats.priority} chapitre(s) à revoir</span>
+              <span>
+                {stats.priority} {t.progToReviewLink}
+              </span>
             </Link>
           )}
         </div>
@@ -206,11 +215,13 @@ export function ProgressionClient({ quizzes }: ProgressionClientProps) {
             return (
               <div key={item.subject} className="space-y-1.5">
                 <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                  <span className="font-bold text-slate-900">{item.subject}</span>
+                  <span className="font-bold text-slate-900">
+                    {translateSubject(item.subject, lang)}
+                  </span>
                   <span className="text-xs font-semibold text-slate-500 tabular-nums">
-                    {item.masteryPct}% • Moy.{' '}
+                    {item.masteryPct}% • {t.lbAvg}{' '}
                     {item.avg20 === null ? '—' : `${formatScore20(item.avg20)}/20`} ({item.done}/
-                    {item.total} quiz)
+                    {item.total})
                   </span>
                 </div>
                 <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
@@ -227,19 +238,17 @@ export function ProgressionClient({ quizzes }: ProgressionClientProps) {
 
       {/* Historique récent */}
       <section className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 space-y-4">
-        <h2 className="text-base font-bold text-slate-900">Activité récente</h2>
+        <h2 className="text-base font-bold text-slate-900">{t.progRecent}</h2>
 
         {stats.recentHistory.length === 0 ? (
           <div className="rounded-xl bg-slate-50 border border-dashed border-slate-200 p-8 text-center space-y-3">
-            <p className="text-sm text-slate-500">
-              Tu n’as pas encore terminé de quiz en {activeLevelInfo.label}.
-            </p>
+            <p className="text-sm text-slate-500">{t.progEmpty}</p>
             <Link
               href="/"
               className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 hover:bg-indigo-600 text-white text-xs font-semibold px-4 py-2.5 transition-colors"
             >
-              <span>Lancer mon premier quiz</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <span>{t.progStartFirst}</span>
+              <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" />
             </Link>
           </div>
         ) : (
@@ -251,6 +260,11 @@ export function ProgressionClient({ quizzes }: ProgressionClientProps) {
                   : h.score20 >= 12
                   ? 'bg-blue-50 text-blue-700 border-blue-200'
                   : 'bg-red-50 text-red-700 border-red-200';
+              const loc = getLocalizedStage(
+                h.quizSlug,
+                { title: h.chapterTitle, desc: '' },
+                lang
+              );
 
               return (
                 <div
@@ -262,14 +276,15 @@ export function ProgressionClient({ quizzes }: ProgressionClientProps) {
                       href={`/quiz/${h.quizSlug}`}
                       className="text-sm font-bold text-slate-900 hover:text-indigo-600"
                     >
-                      {h.chapterTitle}
+                      {loc.title}
                     </Link>
                     <p className="text-xs text-slate-500">
-                      {h.subject} • {h.correctCount}/{h.totalCount} bonnes réponses •{' '}
-                      {formatDuration(h.durationSeconds)} • {h.date}
+                      {translateSubject(h.subject, lang)} • {h.correctCount}/{h.totalCount}{' '}
+                      {t.progCorrectAnswers} • {formatDuration(h.durationSeconds)} • {h.date}
                     </p>
                   </div>
                   <span
+                    dir="ltr"
                     className={`self-start sm:self-center text-xs font-bold px-2.5 py-1 rounded-full border tabular-nums ${badgeColor}`}
                   >
                     {formatScore20(h.score20)} / 20
@@ -288,7 +303,7 @@ export function ProgressionClient({ quizzes }: ProgressionClientProps) {
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-red-600 transition-colors"
         >
           <Trash2 className="w-3.5 h-3.5" />
-          <span>Réinitialiser ma progression locale</span>
+          <span>{t.progReset}</span>
         </button>
       </div>
     </main>

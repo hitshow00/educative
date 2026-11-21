@@ -18,8 +18,16 @@ import {
   loadProgress,
   updateStudentProfile,
 } from '@/lib/progress';
+import { useLanguage } from '@/components/LanguageProvider';
+import {
+  BADGES_AR,
+  LEVEL_AR,
+  translateCity,
+  translateLeague,
+} from '@/lib/i18n';
 
 export function LeaderboardClient() {
+  const { lang, t } = useLanguage();
   const [store, setStore] = useState<ProgressStore>(getDefaultStore);
   const [filterLevel, setFilterLevel] = useState<LevelId | 'ALL'>('2bac');
   const [pseudoInput, setPseudoInput] = useState('');
@@ -58,17 +66,13 @@ export function LeaderboardClient() {
 
   return (
     <main className="max-w-5xl mx-auto px-4 py-6 sm:py-10 space-y-8">
-      {/* En-tête Compétition */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
             <Trophy className="w-6 h-6 text-amber-500" />
-            <span>Classement &amp; Ligues Maroc</span>
+            <span>{t.lbTitle}</span>
           </h1>
-          <p className="text-sm text-slate-500">
-            Cumule des XP sur les 10 niveaux, monte de ligue et bats les meilleurs élèves de ta
-            ville !
-          </p>
+          <p className="text-sm text-slate-500">{t.lbSub}</p>
         </div>
 
         <div className="flex flex-wrap gap-1.5">
@@ -81,7 +85,7 @@ export function LeaderboardClient() {
                 : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
             }`}
           >
-            Tout le Maroc
+            {t.lbAllMorocco}
           </button>
           {LEVELS.map((lvl) => (
             <button
@@ -94,15 +98,14 @@ export function LeaderboardClient() {
                   : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
               }`}
             >
-              {lvl.shortLabel}
+              {lang === 'ar' ? LEVEL_AR[lvl.id].shortLabel : lvl.shortLabel}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Profil rapide + Progression de Ligue */}
+      {/* Profil + Ligue */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Mon Profil Compétiteur */}
         <form
           onSubmit={handleSaveProfile}
           className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4"
@@ -110,12 +113,12 @@ export function LeaderboardClient() {
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
               <User className="w-4 h-4 text-indigo-600" />
-              <span>Ton profil dans le classement</span>
+              <span>{t.lbProfileTitle}</span>
             </h2>
             {savedNotice && (
               <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700">
                 <Check className="w-3.5 h-3.5" />
-                Enregistré
+                {t.lbSaved}
               </span>
             )}
           </div>
@@ -123,21 +126,21 @@ export function LeaderboardClient() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-[11px] font-semibold text-slate-500 mb-1">
-                Ton Pseudo
+                {t.lbPseudo}
               </label>
               <input
                 type="text"
                 maxLength={22}
                 value={pseudoInput}
                 onChange={(e) => setPseudoInput(e.target.value)}
-                placeholder="Ex : Youssef_2Bac"
+                placeholder="Youssef_2Bac"
                 className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
               />
             </div>
 
             <div>
               <label className="block text-[11px] font-semibold text-slate-500 mb-1">
-                Ta Ville
+                {t.lbCity}
               </label>
               <select
                 value={cityInput}
@@ -146,7 +149,7 @@ export function LeaderboardClient() {
               >
                 {MOROCCAN_CITIES.map((c) => (
                   <option key={c} value={c}>
-                    {c}
+                    {translateCity(c, lang)}
                   </option>
                 ))}
               </select>
@@ -157,25 +160,29 @@ export function LeaderboardClient() {
             type="submit"
             className="rounded-xl bg-slate-900 hover:bg-indigo-600 text-white text-xs font-bold px-4 py-2 transition-colors"
           >
-            Mettre à jour mon pseudo
+            {t.lbUpdateBtn}
           </button>
         </form>
 
-        {/* Ma Ligue Actuelle */}
         <div className="bg-white rounded-2xl border border-slate-200 p-5 flex flex-col justify-between gap-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <span className="text-3xl">{league.emoji}</span>
               <div>
-                <p className="text-base font-extrabold text-slate-900">{league.name}</p>
+                <p className="text-base font-extrabold text-slate-900">
+                  {translateLeague(league.id, league.name, lang)}
+                </p>
                 <p className="text-xs text-slate-500">
                   {league.nextXp
-                    ? `Encore ${league.nextXp - store.xp} XP pour la ligue supérieure`
-                    : 'Ligue maximale atteinte — Bravo !'}
+                    ? `${t.lbNextLeagueBefore} ${league.nextXp - store.xp} ${t.lbNextLeagueAfter}`
+                    : t.lbMaxLeague}
                 </p>
               </div>
             </div>
-            <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 border border-indigo-200 px-3 py-1 text-xs font-extrabold text-indigo-700">
+            <span
+              dir="ltr"
+              className="inline-flex items-center gap-1 rounded-full bg-indigo-50 border border-indigo-200 px-3 py-1 text-xs font-extrabold text-indigo-700"
+            >
               <Sparkles className="w-3.5 h-3.5" />
               {store.xp} XP
             </span>
@@ -188,7 +195,7 @@ export function LeaderboardClient() {
                 style={{ width: `${leaguePct}%` }}
               />
             </div>
-            <div className="flex justify-between text-[11px] font-semibold text-slate-400">
+            <div className="flex justify-between text-[11px] font-semibold text-slate-400" dir="ltr">
               {LEAGUES.map((l) => (
                 <span key={l.id} className={store.xp >= l.minXp ? 'text-slate-700' : ''}>
                   {l.emoji} {l.minXp}
@@ -201,13 +208,13 @@ export function LeaderboardClient() {
 
       {/* Tableau du Classement */}
       <section className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+        <div className="px-5 py-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-sm font-bold text-slate-900">
-            Top Élèves ({leaderboard.entries.length})
+            {t.lbTopStudents} ({leaderboard.entries.length})
           </h2>
           {leaderboard.xpToNext && leaderboard.nextRivalName && (
             <span className="text-xs font-semibold text-indigo-700">
-              +{leaderboard.xpToNext} XP pour dépasser {leaderboard.nextRivalName}
+              +{leaderboard.xpToNext} XP {t.heroMoreXpMiddle} {leaderboard.nextRivalName}
             </span>
           )}
         </div>
@@ -234,16 +241,18 @@ export function LeaderboardClient() {
                       <span>{entry.pseudo}</span>
                       {entry.isCurrentUser && (
                         <span className="text-[10px] font-extrabold uppercase bg-indigo-600 text-white px-2 py-0.5 rounded-full">
-                          Toi
+                          {t.lbYou}
                         </span>
                       )}
                     </p>
                     <p className="text-xs text-slate-500 flex items-center gap-2">
                       <span className="inline-flex items-center gap-0.5">
                         <MapPin className="w-3 h-3" />
-                        {entry.city}
+                        {translateCity(entry.city, lang)}
                       </span>
-                      <span>• {entry.level.toUpperCase()}</span>
+                      <span>
+                        • {lang === 'ar' ? LEVEL_AR[entry.level].shortLabel : entry.level.toUpperCase()}
+                      </span>
                       <span>• {entryLeague.emoji}</span>
                     </p>
                   </div>
@@ -252,14 +261,15 @@ export function LeaderboardClient() {
                 <div className="flex items-center gap-3 shrink-0 text-xs font-bold">
                   <span className="hidden sm:inline-flex items-center gap-1 text-amber-700">
                     <Flame className="w-3.5 h-3.5" />
-                    {entry.streak}j
+                    {entry.streak}
+                    {t.daysShort}
                   </span>
                   {entry.avg20 > 0 && (
-                    <span className="hidden md:inline-block text-slate-500 tabular-nums">
-                      Moy. {formatScore20(entry.avg20)}/20
+                    <span className="hidden md:inline-block text-slate-500 tabular-nums" dir="ltr">
+                      {t.lbAvg} {formatScore20(entry.avg20)}/20
                     </span>
                   )}
-                  <span className="rounded-full bg-slate-900 text-white px-3 py-1 tabular-nums">
+                  <span dir="ltr" className="rounded-full bg-slate-900 text-white px-3 py-1 tabular-nums">
                     {entry.xp} XP
                   </span>
                 </div>
@@ -273,26 +283,33 @@ export function LeaderboardClient() {
       <section className="space-y-3">
         <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
           <Award className="w-4 h-4 text-indigo-600" />
-          <span>Tes Badges &amp; Trophées</span>
+          <span>{t.lbBadgesTitle}</span>
         </h2>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {badges.map((b) => (
-            <div
-              key={b.id}
-              className={`rounded-2xl border p-4 flex items-start gap-3 ${
-                b.unlocked
-                  ? 'bg-white border-emerald-200'
-                  : 'bg-slate-50 border-slate-200 opacity-60 grayscale'
-              }`}
-            >
-              <span className="text-2xl shrink-0">{b.emoji}</span>
-              <div>
-                <p className="text-xs sm:text-sm font-bold text-slate-900">{b.title}</p>
-                <p className="text-[11px] text-slate-500 mt-0.5">{b.desc}</p>
+          {badges.map((b) => {
+            const arBadge = BADGES_AR[b.id];
+            return (
+              <div
+                key={b.id}
+                className={`rounded-2xl border p-4 flex items-start gap-3 ${
+                  b.unlocked
+                    ? 'bg-white border-emerald-200'
+                    : 'bg-slate-50 border-slate-200 opacity-60 grayscale'
+                }`}
+              >
+                <span className="text-2xl shrink-0">{b.emoji}</span>
+                <div>
+                  <p className="text-xs sm:text-sm font-bold text-slate-900">
+                    {lang === 'ar' && arBadge ? arBadge.title : b.title}
+                  </p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    {lang === 'ar' && arBadge ? arBadge.desc : b.desc}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
     </main>

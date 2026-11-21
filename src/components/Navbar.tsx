@@ -7,6 +7,7 @@ import {
   BookOpenCheck,
   Flame,
   GraduationCap,
+  Languages,
   RotateCcw,
   Sparkles,
   TrendingUp,
@@ -16,9 +17,12 @@ import {
 } from 'lucide-react';
 import { getLeagueForXp } from '@/types/quiz';
 import { computeStreak, loadProgress, toggleSoundEnabled } from '@/lib/progress';
+import { useLanguage } from '@/components/LanguageProvider';
+import { translateLeague } from '@/lib/i18n';
 
 export function Navbar() {
   const pathname = usePathname();
+  const { lang, toggleLang, t } = useLanguage();
   const [xp, setXp] = useState(0);
   const [streak, setStreak] = useState(0);
   const [soundOn, setSoundOn] = useState(true);
@@ -40,12 +44,13 @@ export function Navbar() {
   }, [pathname]);
 
   const league = getLeagueForXp(xp);
+  const leagueName = translateLeague(league.id, league.name, lang);
 
   const navItems = [
-    { href: '/', label: 'Parcours', icon: BookOpenCheck },
-    { href: '/classement', label: 'Classement', icon: Trophy },
-    { href: '/progression', label: 'Progrès', icon: TrendingUp },
-    { href: '/a-revoir', label: 'À revoir', icon: RotateCcw },
+    { href: '/', label: t.navRoadmap, icon: BookOpenCheck },
+    { href: '/classement', label: t.navLeaderboard, icon: Trophy },
+    { href: '/progression', label: t.navProgress, icon: TrendingUp },
+    { href: '/a-revoir', label: t.navReview, icon: RotateCcw },
   ];
 
   function handleSoundToggle() {
@@ -62,10 +67,10 @@ export function Navbar() {
             <GraduationCap className="w-5 h-5" />
           </span>
           <div className="leading-tight hidden sm:block">
-            <span className="block text-sm font-extrabold text-slate-900 tracking-tight">
+            <span className="block text-sm font-extrabold text-slate-900 tracking-tight" dir="ltr">
               ExamQuiz<span className="text-indigo-600">.ma</span>
             </span>
-            <span className="block text-[10px] text-slate-500">Arène Examens Maroc</span>
+            <span className="block text-[10px] text-slate-500">{t.brandSub}</span>
           </div>
         </Link>
 
@@ -89,35 +94,45 @@ export function Navbar() {
                 }`}
               >
                 <Icon className="w-4 h-4 shrink-0" />
-                <span className="hidden xs:inline sm:inline">{item.label}</span>
+                <span className="hidden sm:inline">{item.label}</span>
               </Link>
             );
           })}
         </nav>
 
-        {/* Badges Compétition + Son */}
+        {/* Badges + Bouton Langue FR / العربية + Son */}
         <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={toggleLang}
+            title={lang === 'fr' ? 'Passer en arabe (العربية)' : 'التبديل إلى الفرنسية (Français)'}
+            className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2.5 py-1.5 text-xs font-extrabold transition-colors"
+          >
+            <Languages className="w-3.5 h-3.5 shrink-0" />
+            <span>{lang === 'fr' ? 'العربية' : 'FR'}</span>
+          </button>
+
           <Link
             href="/classement"
-            title={league.name}
+            title={leagueName}
             className={`hidden md:inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-bold ${league.badgeBg} ${league.colorClass}`}
           >
             <span>{league.emoji}</span>
-            <span>{xp} XP</span>
+            <span dir="ltr">{xp} XP</span>
           </Link>
 
           <span
-            title="Série active"
+            title={t.progStreak}
             className="hidden sm:inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2 py-1 text-xs font-bold text-amber-700"
           >
             <Flame className="w-3.5 h-3.5" />
-            {streak}j
+            {streak}
+            {t.daysShort}
           </span>
 
           <button
             type="button"
             onClick={handleSoundToggle}
-            title={soundOn ? 'Désactiver les sons' : 'Activer les sons'}
             className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors"
           >
             {soundOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 text-slate-400" />}
@@ -125,9 +140,9 @@ export function Navbar() {
 
           <Link
             href="/classement"
-            className="md:hidden inline-flex items-center gap-1 rounded-full bg-indigo-50 border border-indigo-200 px-2 py-1 text-[11px] font-bold text-indigo-700"
+            className="md:hidden inline-flex items-center gap-1 rounded-full bg-slate-100 border border-slate-200 px-2 py-1 text-[11px] font-bold text-slate-700"
           >
-            <Sparkles className="w-3 h-3" />
+            <Sparkles className="w-3 h-3 text-indigo-600" />
             {xp}
           </Link>
         </div>
