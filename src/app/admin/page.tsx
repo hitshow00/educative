@@ -1,20 +1,17 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
-import type { Resource } from '@/types/resource';
+import { CURRICULUM_QUIZZES } from '@/data/curriculum';
+import type { Quiz } from '@/types/quiz';
 import { AdminDashboard } from './AdminDashboard';
 
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Administration | Soutien Scolaire Maroc',
+  title: 'Administration | ExamQuiz.ma',
   robots: { index: false, follow: false },
 };
 
-/**
- * Page protégée côté serveur (défense en profondeur en plus du middleware).
- * Vérifie la session via `supabase.auth.getUser()` (jamais `getSession()` côté serveur).
- */
 export default async function AdminPage() {
   const supabase = createClient();
   const {
@@ -25,18 +22,27 @@ export default async function AdminPage() {
     redirect('/login?next=/admin');
   }
 
-  const { data } = await supabase
-    .from('resources')
-    .select('*')
-    .order('created_at', { ascending: false });
+  let supabaseQuizzes: Quiz[] = [];
+  try {
+    const { data, error } = await supabase
+      .from('quizzes')
+      .select(
+        'id, slug, level, branch, subject, chapter_title, description, exam_type, difficulty, estimated_minutes, questions(id, question_text, options, correct_index, explanation, exam_tip, order_index)'
+      )
+      .order('created_at', { ascending: false });
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://dl.monsite.ma';
+    if (!error && Array.isArray(data)) {
+      supabaseQuizzes = data as unknown as Quiz[];
+    }
+  } catch {
+    supabaseQuizzes = [];
+  }
 
   return (
     <AdminDashboard
       userEmail={user.email || 'Administrateur'}
-      initialResources={(data as Resource[]) || []}
-      siteUrl={siteUrl}
+      initialSupabaseQuizzes={supabaseQuizzes}
+      builtInCount={CURRICULUM_QUIZZES.length}
     />
   );
 }

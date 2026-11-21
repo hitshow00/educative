@@ -1,22 +1,16 @@
-# Edu Maroc Safelink (Blogger + Supabase + Vercel)
+# ExamQuiz.ma — Plateforme Interactive de Quiz & Suivi Examens Maroc
 
-Plateforme complète de gestion et de téléchargement sécurisé pour site éducatif marocain (Baccalauréat, Régional, Brevet).
+Application web autonome (**Next.js 14 App Router + TypeScript + Tailwind CSS + Supabase**) conçue pour aider les élèves au Maroc à préparer activement leurs examens certifiants :
 
-## Structure du projet
+- **2ème Bac** (Examen National : Maths, PC, SVT, Philosophie, Anglais)
+- **1ère Bac** (Examen Régional : Français œuvres intégrales, Histoire-Géo, Éducation Islamique)
+- **3ème Année Collège** (Brevet / Régional BIOF : Maths, PC, SVT)
+- **6ème Primaire** (Examen Provincial : Maths, Français, Activité Scientifique)
 
-- `supabase/schema.sql` : Schéma PostgreSQL complet (table `resources`, RLS, RPC `increment_download`).
-- `blogger/snippet.html` : Script HTML/CSS/JS autonome à coller avant `</body>` dans Blogger.
-- `src/app/download/[slug]/` : Page Safelink Mobile-First avec compte à rebours 8s et 3 emplacements publicitaires.
-- `src/app/admin/page.tsx` : Panneau d'administration privé (Supabase Auth + CRUD + statistiques + générateur HTML Blogger).
+## Fonctionnalités principales
 
-## Mise en route rapide
-
-1. **Supabase** : Exécutez `supabase/schema.sql` dans *SQL Editor*, désactivez les inscriptions publiques (*Authentication → Providers → Email*), puis créez votre compte admin dans *Authentication → Users*.
-2. **Variables d'environnement** : Renseignez `.env.local` (local) et *Vercel → Environment Variables* (production) avec `NEXT_PUBLIC_SUPABASE_URL` et `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
-3. **Développement local** :
-   ```bash
-   npm install
-   npm run dev
-   ```
-4. **Déploiement Vercel** : Poussez sur GitHub, importez dans Vercel, ajoutez les variables d'environnement et liez votre sous-domaine `dl.monsite.ma` (CNAME → `cname.vercel-dns.com`).
-5. **Blogger** : Collez `blogger/snippet.html` avant `</body>` dans *Thème → Modifier le code HTML*, puis insérez `<div class="edu-download-box" data-slug="votre-slug"></div>` dans vos articles.
+- **2 modes de quiz** : *Entraînement* (correction immédiate + explication + piège d'examen + combo) et *Examen Blanc* (chrono + note finale `/20` + mention marocaine + option *Refaire uniquement mes erreurs*).
+- **Suivi de progression (`/progression`)** : note globale estimée `/20`, maîtrise par matière, série quotidienne (streak), points XP, historique récent.
+- **Révision ciblée (`/a-revoir`)** : liste automatique des chapitres `< 12/20` en priorité puis des chapitres non tentés.
+- **Persistance hybride** : sauvegarde immédiate dans `localStorage` + synchronisation cloud Supabase (`user_attempts`) si l'utilisateur est connecté.
+- **Panneau Admin (`/admin`)** : protégé par `@supabase/ssr`, permet de publier de nouveaux quiz par import JSON.
