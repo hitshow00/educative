@@ -1,0 +1,1062 @@
+import type { Quiz, QuizDifficulty, QuizQuestion } from '@/types/quiz';
+
+function make2BacStage(
+  subject: 'Mathématiques' | 'Physique-Chimie' | 'SVT',
+  stage: number,
+  slugSuffix: string,
+  title: string,
+  description: string,
+  examSource: string | undefined,
+  questions: QuizQuestion[]
+): Quiz {
+  const difficulty: QuizDifficulty =
+    stage <= 3 ? 'Facile' : stage <= 6 ? 'Moyen' : stage <= 9 ? 'Difficile' : 'Boss Examen';
+
+  return {
+    id: `2bac-${subject.toLowerCase().slice(0, 4)}-s${stage}`,
+    slug: `2bac-${slugSuffix}-niv-${stage}`,
+    level: '2bac',
+    branch: subject === 'SVT' ? 'Sciences SVT / PC' : 'Sciences PC / SVT / SM',
+    subject,
+    stage_number: stage,
+    chapter_title: title,
+    description,
+    exam_type: 'National',
+    difficulty,
+    estimated_minutes: stage === 10 ? 8 : stage >= 7 ? 5 : 4,
+    exam_source: examSource,
+    questions,
+  };
+}
+
+export const TRACKS_2BAC: Quiz[] = [
+  // =========================================================================
+  // 2ÈME BAC — MATHÉMATIQUES (NIVEAUX 1 À 10)
+  // =========================================================================
+  make2BacStage(
+    'Mathématiques',
+    1,
+    'maths-limites-bases',
+    'Limites Usuelles & Formes Simples',
+    'Premiers réflexes sur les limites en ±∞ et en 0.',
+    undefined,
+    [
+      {
+        id: 'm1-1',
+        question_text: 'Quelle est la limite de 1 / x lorsque x tend vers +∞ ?',
+        options: ['+∞', '1', '0', '-∞'],
+        correct_index: 2,
+        explanation: 'Plus x devient grand, plus 1/x se rapproche de 0.',
+      },
+      {
+        id: 'm1-2',
+        question_text: 'Quelle est la limite de (3x² + 5x) / (x² - 1) lorsque x tend vers +∞ ?',
+        options: ['0', '3', '5', '+∞'],
+        correct_index: 1,
+        explanation: 'Pour une fraction rationnelle en ±∞, on prend le rapport des termes de plus haut degré : 3x² / x² = 3.',
+      },
+      {
+        id: 'm1-3',
+        question_text: 'Que vaut lim(x→0⁺) ln(x) ?',
+        options: ['0', '1', '-∞', '+∞'],
+        correct_index: 2,
+        explanation: 'La fonction ln tend vers -∞ lorsque x tend vers 0 par valeurs positives (asymptote verticale x = 0).',
+      },
+    ]
+  ),
+  make2BacStage(
+    'Mathématiques',
+    2,
+    'maths-continuite-tvi',
+    'Continuité & Théorème des Valeurs Intermédiaires',
+    'Prouver l’existence et l’unicité d’une solution α.',
+    undefined,
+    [
+      {
+        id: 'm2-1',
+        question_text: 'Pour appliquer le TVI et prouver que f(x) = 0 admet une unique solution dans ]a, b[, il faut f continue, strictement monotone et :',
+        options: ['f(a) + f(b) = 0', 'f(a) × f(b) < 0', 'f(a) × f(b) > 0', 'f\'(a) = 0'],
+        correct_index: 1,
+        explanation: 'f(a) et f(b) doivent être de signes contraires, donc f(a)×f(b) < 0.',
+        exam_tip: 'Citez toujours les 3 conditions à l’examen national pour avoir la note complète.',
+      },
+      {
+        id: 'm2-2',
+        question_text: 'Si f est continue et strictement croissante sur [0, +∞[ avec f(0) = 2 et lim(+∞) f = +∞, alors f([0, +∞[) vaut :',
+        options: ['[0, 2]', '[2, +∞[', ']2, +∞[', 'ℝ'],
+        correct_index: 1,
+        explanation: 'L’image d’un intervalle [a, b[ par une fonction continue strictement croissante est [f(a), lim(b⁻) f[.',
+      },
+      {
+        id: 'm2-3',
+        question_text: 'Si f est continue et strictement décroissante sur [1, 3], alors f([1, 3]) est égal à :',
+        options: ['[f(1), f(3)]', '[f(3), f(1)]', ']f(3), f(1)[', '[1, 3]'],
+        correct_index: 1,
+        explanation: 'Une fonction strictement décroissante inverse l’ordre des bornes : f(3) ≤ f(1).',
+      },
+    ]
+  ),
+  make2BacStage(
+    'Mathématiques',
+    3,
+    'maths-derivation',
+    'Dérivation & Tangentes',
+    'Dérivées composées, sens de variation et équation de la tangente.',
+    undefined,
+    [
+      {
+        id: 'm3-1',
+        question_text: 'Quelle est la dérivée de f(x) = ln(x² + 1) sur ℝ ?',
+        options: ['1 / (x² + 1)', '2x / (x² + 1)', '2x · ln(x² + 1)', 'x / (x² + 1)'],
+        correct_index: 1,
+        explanation: '(ln u)\' = u\' / u avec u(x) = x² + 1 et u\'(x) = 2x.',
+      },
+      {
+        id: 'm3-2',
+        question_text: 'L’équation de la tangente à (Cf) au point d’abscisse a est :',
+        options: ['y = f\'(a)(x + a) + f(a)', 'y = f\'(a)(x - a) + f(a)', 'y = f(a)(x - a) + f\'(a)', 'y = f\'(x)(x - a)'],
+        correct_index: 1,
+        explanation: 'Formule officielle : y = f\'(a)(x - a) + f(a).',
+      },
+      {
+        id: 'm3-3',
+        question_text: 'Si f\'\'(x) s’annule en x₀ en changeant de signe, le point A(x₀, f(x₀)) est :',
+        options: ['Un extremum', 'Un point d’inflexion', 'Une asymptote', 'Un centre de symétrie'],
+        correct_index: 1,
+        explanation: 'Le changement de signe de la dérivée seconde f\'\' indique un changement de concavité, donc un point d’inflexion.',
+      },
+    ]
+  ),
+  make2BacStage(
+    'Mathématiques',
+    4,
+    'maths-suites',
+    'Suites Numériques & Convergence',
+    'Suites géométriques, récurrence et convergence monotone.',
+    undefined,
+    [
+      {
+        id: 'm4-1',
+        question_text: 'Une suite géométrique (v_n) de raison q vérifie lim(n→+∞) q^n = 0 si et seulement si :',
+        options: ['q > 1', '-1 < q < 1', 'q ≤ -1', 'q = 1'],
+        correct_index: 1,
+        explanation: 'q^n converge vers 0 uniquement lorsque |q| < 1 (soit -1 < q < 1).',
+      },
+      {
+        id: 'm4-2',
+        question_text: 'Si une suite (u_n) est décroissante et minorée par 0, alors :',
+        options: ['Elle diverge vers -∞', 'Elle converge vers 0 obligatoirement', 'Elle est convergente vers une limite l ≥ 0', 'Elle est constante'],
+        correct_index: 2,
+        explanation: 'Toute suite décroissante et minorée converge vers une limite finie l ≥ minorant.',
+        exam_tip: 'Attention : le minorant 0 n’est pas forcément la limite, il faut résoudre f(l) = l !',
+      },
+      {
+        id: 'm4-3',
+        question_text: 'Si v_n = u_n - 2 est géométrique de raison 1/3 et v_0 = 3, que vaut u_n ?',
+        options: ['u_n = 3(1/3)^n - 2', 'u_n = 3(1/3)^n + 2', 'u_n = 2(1/3)^n + 3', 'u_n = (1/3)^n + 2'],
+        correct_index: 1,
+        explanation: 'v_n = v_0 · q^n = 3(1/3)^n et u_n = v_n + 2 = 3(1/3)^n + 2.',
+      },
+    ]
+  ),
+  make2BacStage(
+    'Mathématiques',
+    5,
+    'maths-logarithme',
+    'Fonction Logarithme Népérien (ln)',
+    'Domaine de définition, propriétés algébriques et croissances comparées.',
+    undefined,
+    [
+      {
+        id: 'm5-1',
+        question_text: 'Quel est le domaine de définition de f(x) = ln(x - 3) ?',
+        options: ['[3, +∞[', ']3, +∞[', 'ℝ \\ {3}', ']0, +∞['],
+        correct_index: 1,
+        explanation: 'Il faut strictement x - 3 > 0, donc x > 3, soit Df = ]3, +∞[.',
+      },
+      {
+        id: 'm5-2',
+        question_text: 'Quelle est la limite de (ln x) / x lorsque x tend vers +∞ ?',
+        options: ['+∞', '1', '0', '-∞'],
+        correct_index: 2,
+        explanation: 'Limite usuelle de croissance comparée : lim(+∞) (ln x)/x = 0.',
+      },
+      {
+        id: 'm5-3',
+        question_text: 'Résoudre dans ]0, +∞[ l’équation ln(x) = 2 :',
+        options: ['x = 2', 'x = 2e', 'x = e²', 'x = ln(2)'],
+        correct_index: 2,
+        explanation: 'ln(x) = 2 ⇔ x = e².',
+      },
+    ]
+  ),
+  make2BacStage(
+    'Mathématiques',
+    6,
+    'maths-exponentielle',
+    'Fonction Exponentielle & Équations',
+    'Limites usuelles, dérivation et résolution par changement de variable.',
+    undefined,
+    [
+      {
+        id: 'm6-1',
+        question_text: 'Que vaut lim(x→-∞) x · e^x ?',
+        options: ['-∞', '0', '+∞', '1'],
+        correct_index: 1,
+        explanation: 'Par croissance comparée, l’exponentielle l’emporte sur x en -∞, donc lim x·e^x = 0.',
+      },
+      {
+        id: 'm6-2',
+        question_text: 'Quelles sont les solutions dans ℝ de e^(2x) - 3e^x + 2 = 0 ?',
+        options: ['0 et 2', '0 et ln(2)', '1 et 2', 'e et e²'],
+        correct_index: 1,
+        explanation: 'En posant X = e^x > 0, X² - 3X + 2 = 0 donne X = 1 ou X = 2, donc x = 0 ou x = ln(2).',
+      },
+      {
+        id: 'm6-3',
+        question_text: 'Quelle est la dérivée de f(x) = (x - 1)e^x ?',
+        options: ['e^x', 'x · e^x', '(x + 1)e^x', '(x - 1)e^x'],
+        correct_index: 1,
+        explanation: 'f\'(x) = 1·e^x + (x - 1)e^x = x·e^x.',
+      },
+    ]
+  ),
+  make2BacStage(
+    'Mathématiques',
+    7,
+    'maths-complexes-national',
+    'Nombres Complexes (Annales Nationales)',
+    'Forme trigonométrique, rotation et géométrie complexe d’examen national.',
+    'Examen National 2022 • Normale PC/SVT',
+    [
+      {
+        id: 'm7-1',
+        question_text: 'Quel est le module du nombre complexe z = √3 + i ?',
+        options: ['1', '2', '√2', '4'],
+        correct_index: 1,
+        explanation: '|z| = √((√3)² + 1²) = √(3 + 1) = √4 = 2.',
+        exam_source: 'National 2022 • Normale',
+      },
+      {
+        id: 'm7-2',
+        question_text: 'Un argument du nombre complexe z = √3 + i est :',
+        options: ['π / 6', 'π / 3', 'π / 4', 'π / 2'],
+        correct_index: 0,
+        explanation: 'z = 2(√3/2 + i·1/2) = 2(cos(π/6) + i·sin(π/6)), donc arg(z) ≡ π/6 [2π].',
+        exam_source: 'National 2022 • Normale',
+      },
+      {
+        id: 'm7-3',
+        question_text: 'Si (z_C - z_A) / (z_B - z_A) = i, alors le triangle ABC est :',
+        options: ['Équilatéral', 'Rectangle isocèle en A', 'Rectangle en B', 'Aplati'],
+        correct_index: 1,
+        explanation: 'Module = |i| = 1 ⇒ AC = AB, et argument = π/2 ⇒ (AB) ⊥ (AC). Donc ABC est rectangle isocèle en A.',
+        exam_source: 'National 2021 • Normale',
+      },
+    ]
+  ),
+  make2BacStage(
+    'Mathématiques',
+    8,
+    'maths-integrales-national',
+    'Calcul Intégral & Aires (Annales Nationales)',
+    'Primitives, intégration par parties et calcul d’aire en cm².',
+    'Examen National 2023 • Normale PC/SVT',
+    [
+      {
+        id: 'm8-1',
+        question_text: 'Que vaut l’intégrale ∫ de 1 à e de (1 / x) dx ?',
+        options: ['0', '1', 'e', 'e - 1'],
+        correct_index: 1,
+        explanation: '[ln(x)] de 1 à e = ln(e) - ln(1) = 1 - 0 = 1.',
+        exam_source: 'National 2023 • Normale',
+      },
+      {
+        id: 'm8-2',
+        question_text: 'Par intégration par parties, ∫ de 0 à 1 de (x · e^x) dx est égal à :',
+        options: ['e', '1', 'e - 1', '0'],
+        correct_index: 1,
+        explanation: 'Avec u(x) = x et v\'(x) = e^x : [x·e^x]₀¹ - ∫₀¹ e^x dx = e - (e - 1) = 1.',
+        exam_source: 'National 2023 • Rattrapage',
+      },
+      {
+        id: 'm8-3',
+        question_text: 'Dans un repère d’unité ‖i‖ = 2 cm, si ∫₀¹ f(x)dx = 3 (avec f ≥ 0), l’aire en cm² vaut :',
+        options: ['3 cm²', '6 cm²', '12 cm²', '9 cm²'],
+        correct_index: 2,
+        explanation: 'L’unité d’aire vaut ‖i‖ × ‖j‖ = 2 × 2 = 4 cm², donc Aire = 3 × 4 = 12 cm².',
+        exam_tip: 'Piège classique du Bac Maroc : ne jamais oublier de multiplier par l’unité d’aire (‖i‖²) !',
+        exam_source: 'National 2022 • Normale',
+      },
+    ]
+  ),
+  make2BacStage(
+    'Mathématiques',
+    9,
+    'maths-probas-espace-national',
+    'Probabilités & Espace (Annales Nationales)',
+    'Tirages simultanés, probabilité conditionnelle, sphère et plan.',
+    'Examen National 2024 • Normale PC/SVT',
+    [
+      {
+        id: 'm9-1',
+        question_text: 'Une urne contient 4 boules rouges et 6 boules vertes. On tire simultanément 2 boules. Combien y a-t-il de tirages possibles ?',
+        options: ['20', '45', '90', '100'],
+        correct_index: 1,
+        explanation: 'Tirage simultané = Combinaison : C(10, 2) = (10 × 9) / 2 = 45.',
+        exam_source: 'National 2024 • Normale',
+      },
+      {
+        id: 'm9-2',
+        question_text: 'Dans l’espace, un vecteur normal au plan (P) d’équation 2x - y + 3z - 5 = 0 est :',
+        options: ['n(2, 1, 3)', 'n(2, -1, 3)', 'n(-2, 1, 5)', 'n(1, -1, 3)'],
+        correct_index: 1,
+        explanation: 'Les coordonnées d’un vecteur normal sont directement les coefficients (a, b, c) de x, y, z : (2, -1, 3).',
+        exam_source: 'National 2023 • Normale',
+      },
+      {
+        id: 'm9-3',
+        question_text: 'Une sphère de centre Ω et de rayon R est tangente à un plan (P) si et seulement si :',
+        options: ['d(Ω, P) > R', 'd(Ω, P) < R', 'd(Ω, P) = R', 'd(Ω, P) = 0'],
+        correct_index: 2,
+        explanation: 'Le plan est tangent à la sphère lorsque la distance du centre au plan est exactement égale au rayon R.',
+        exam_source: 'National 2024 • Normale',
+      },
+    ]
+  ),
+  make2BacStage(
+    'Mathématiques',
+    10,
+    'maths-boss-national',
+    '🏆 BOSS : Simulation Examen National Maths',
+    'Synthèse chronométrée des 5 grands thèmes du Bac National (2022–2024).',
+    'Compilation Examens Nationaux 2022–2024',
+    [
+      {
+        id: 'm10-1',
+        question_text: 'Que vaut lim(x→+∞) (e^x) / x² ?',
+        options: ['0', '1', '+∞', '2'],
+        correct_index: 2,
+        explanation: 'Par croissance comparée, e^x croît plus vite que toute puissance x^n en +∞, donc la limite est +∞.',
+        exam_source: 'National 2024 • Normale',
+      },
+      {
+        id: 'm10-2',
+        question_text: 'Soit z = 1 - i. Que vaut z⁴ ?',
+        options: ['4', '-4', '4i', '-4i'],
+        correct_index: 1,
+        explanation: 'z = √2·e^(-iπ/4) donc z⁴ = (√2)⁴·e^(-iπ) = 4 × (-1) = -4.',
+        exam_source: 'National 2023 • Normale',
+      },
+      {
+        id: 'm10-3',
+        question_text: 'Pour deux événements indépendants A et B avec P(A) = 0,4 et P(B) = 0,5, que vaut P(A ∩ B) ?',
+        options: ['0,9', '0,2', '0,1', '0,45'],
+        correct_index: 1,
+        explanation: 'Si A et B sont indépendants, P(A ∩ B) = P(A) × P(B) = 0,4 × 0,5 = 0,2.',
+        exam_source: 'National 2022 • Rattrapage',
+      },
+      {
+        id: 'm10-4',
+        question_text: 'La solution générale de l’équation différentielle y\' - 3y = 0 est :',
+        options: ['y(x) = C·e^(-3x)', 'y(x) = C·e^(3x)', 'y(x) = 3x + C', 'y(x) = C·e^x + 3'],
+        correct_index: 1,
+        explanation: 'y\' = ay admet pour solutions y(x) = C·e^(ax) avec C ∈ ℝ. Ici a = 3.',
+        exam_source: 'National 2023 • Normale',
+      },
+      {
+        id: 'm10-5',
+        question_text: 'Une primitive de f(x) = (2x) / (x² + 1) sur ℝ est :',
+        options: ['ln(x² + 1)', '1 / (x² + 1)²', '2·ln(x² + 1)', 'x² · ln(x)'],
+        correct_index: 0,
+        explanation: 'f(x) est de la forme u\'/u avec u(x) = x² + 1 > 0, donc une primitive est ln(x² + 1).',
+        exam_source: 'National 2024 • Rattrapage',
+      },
+    ]
+  ),
+
+  // =========================================================================
+  // 2ÈME BAC — PHYSIQUE-CHIMIE (NIVEAUX 1 À 10)
+  // =========================================================================
+  make2BacStage(
+    'Physique-Chimie',
+    1,
+    'pc-ondes-mecaniques',
+    'Ondes Mécaniques Progressives',
+    'Célérité, retard temporel et nature transversale/longitudinale.',
+    undefined,
+    [
+      {
+        id: 'pc1-1',
+        question_text: 'Une onde sonore dans l’air est une onde :',
+        options: ['Transversale et électromagnétique', 'Longitudinale et mécanique', 'Transversale et mécanique', 'Qui se propage dans le vide'],
+        correct_index: 1,
+        explanation: 'Le son est une onde mécanique longitudinale : il a besoin d’un milieu matériel.',
+      },
+      {
+        id: 'pc1-2',
+        question_text: 'Le retard temporel τ entre deux points distants de d pour une onde de célérité v vaut :',
+        options: ['τ = d × v', 'τ = d / v', 'τ = v / d', 'τ = d + v'],
+        correct_index: 1,
+        explanation: 'τ = d / v (en secondes si d est en m et v en m/s).',
+      },
+      {
+        id: 'pc1-3',
+        question_text: 'La longueur d’onde λ est reliée à la célérité v et à la fréquence N par :',
+        options: ['λ = v × N', 'λ = v / N', 'λ = N / v', 'λ = v / T'],
+        correct_index: 1,
+        explanation: 'λ = v·T = v / N.',
+      },
+    ]
+  ),
+  make2BacStage(
+    'Physique-Chimie',
+    2,
+    'pc-ondes-lumineuses',
+    'Ondes Lumineuses & Diffraction',
+    'Diffraction par une fente, prisme et indice de réfraction.',
+    undefined,
+    [
+      {
+        id: 'pc2-1',
+        question_text: 'L’écart angulaire θ de diffraction d’une lumière λ par une fente de largeur a vaut :',
+        options: ['θ = a / λ', 'θ = λ / a', 'θ = 2λ / a', 'θ = λ · a'],
+        correct_index: 1,
+        explanation: 'θ = λ / a en radians.',
+        exam_tip: 'Largeur de la tache centrale : L = 2·θ·D = 2·λ·D / a.',
+      },
+      {
+        id: 'pc2-2',
+        question_text: 'Lorsqu’une radiation lumineuse passe de l’air dans le verre, quelle grandeur ne change PAS ?',
+        options: ['Sa vitesse v', 'Sa longueur d’onde λ', 'Sa fréquence ν', 'Sa direction'],
+        correct_index: 2,
+        explanation: 'La fréquence ν dépend uniquement de la source lumineuse.',
+      },
+      {
+        id: 'pc2-3',
+        question_text: 'L’indice de réfraction n d’un milieu transparent où la lumière se propage à la vitesse v vaut :',
+        options: ['n = v / c', 'n = c / v', 'n = c × v', 'n = 1 / v'],
+        correct_index: 1,
+        explanation: 'n = c / v ≥ 1 (avec c = 3 × 10⁸ m/s).',
+      },
+    ]
+  ),
+  make2BacStage(
+    'Physique-Chimie',
+    3,
+    'pc-nucleaire',
+    'Décroissance Radioactive & Énergie Nucléaire',
+    'Lois de Soddy, demi-vie t₁/₂ et défaut de masse.',
+    undefined,
+    [
+      {
+        id: 'pc3-1',
+        question_text: 'Lors d’une désintégration α, le noyau père émet :',
+        options: ['Un électron', 'Un positon', 'Un noyau d’hélium ⁴₂He', 'Un neutron'],
+        correct_index: 2,
+        explanation: 'La particule α est un noyau d’hélium ⁴₂He (A diminue de 4, Z diminue de 2).',
+      },
+      {
+        id: 'pc3-2',
+        question_text: 'La relation entre la demi-vie t₁/₂ et la constante radioactive λ est :',
+        options: ['t₁/₂ = λ · ln(2)', 't₁/₂ = ln(2) / λ', 't₁/₂ = 1 / λ', 't₁/₂ = 2 / λ'],
+        correct_index: 1,
+        explanation: 't₁/₂ = ln(2) / λ = τ · ln(2).',
+      },
+      {
+        id: 'pc3-3',
+        question_text: 'Après une durée égale à 2·t₁/₂, il reste quelle fraction des noyaux initiaux N₀ ?',
+        options: ['N₀ / 2', 'N₀ / 4', 'N₀ / 8', '0'],
+        correct_index: 1,
+        explanation: 'Au bout de n demi-vies, N = N₀ / 2ⁿ. Pour n = 2 : N = N₀ / 4.',
+      },
+    ]
+  ),
+  make2BacStage(
+    'Physique-Chimie',
+    4,
+    'pc-dipole-rc',
+    'Dipôle RC (Charge & Décharge)',
+    'Constante de temps τ = RC, équation différentielle et énergie.',
+    undefined,
+    [
+      {
+        id: 'pc4-1',
+        question_text: 'La constante de temps τ d’un dipôle RC vaut :',
+        options: ['τ = R / C', 'τ = R × C', 'τ = C / R', 'τ = 1 / (RC)'],
+        correct_index: 1,
+        explanation: 'τ = R · C (en secondes).',
+      },
+      {
+        id: 'pc4-2',
+        question_text: 'L’énergie électrique emmagasinée dans un condensateur de capacité C sous une tension u_C vaut :',
+        options: ['E_e = C · u_C', 'E_e = (1/2) C · u_C²', 'E_e = (1/2) u_C / C', 'E_e = C² · u_C'],
+        correct_index: 1,
+        explanation: 'E_e = ½ · C · u_C² (en Joules).',
+      },
+      {
+        id: 'pc4-3',
+        question_text: 'À l’instant t = τ lors de la charge d’un condensateur initialement déchargé sous E, u_C(τ) vaut environ :',
+        options: ['37 % de E', '50 % de E', '63 % de E', '100 % de E'],
+        correct_index: 2,
+        explanation: 'u_C(τ) = E(1 - e⁻¹) ≈ 0,63 E.',
+      },
+    ]
+  ),
+  make2BacStage(
+    'Physique-Chimie',
+    5,
+    'pc-dipole-rl-rlc',
+    'Dipôle RL & Oscillations RLC',
+    'Constante de temps L/R, période propre T₀ et résonance.',
+    undefined,
+    [
+      {
+        id: 'pc5-1',
+        question_text: 'La constante de temps τ d’un dipôle RL (de résistance totale R_tot) vaut :',
+        options: ['τ = R_tot / L', 'τ = L / R_tot', 'τ = L × R_tot', 'τ = √(L·R)'],
+        correct_index: 1,
+        explanation: 'τ = L / R_tot (en secondes).',
+      },
+      {
+        id: 'pc5-2',
+        question_text: 'La période propre T₀ d’un circuit LC idéal est :',
+        options: ['T₀ = 2π·L·C', 'T₀ = 2π·√(L·C)', 'T₀ = 1 / (2π√(LC))', 'T₀ = π·√(L/C)'],
+        correct_index: 1,
+        explanation: 'Formule de Thomson : T₀ = 2π√(LC).',
+      },
+      {
+        id: 'pc5-3',
+        question_text: 'L’énergie magnétique emmagasinée dans une bobine d’inductance L parcourue par i vaut :',
+        options: ['E_m = L · i', 'E_m = (1/2) L · i²', 'E_m = (1/2) L² · i', 'E_m = L / i²'],
+        correct_index: 1,
+        explanation: 'E_m = ½ · L · i².',
+      },
+    ]
+  ),
+  make2BacStage(
+    'Physique-Chimie',
+    6,
+    'pc-cinetique-chimie',
+    'Cinétique Chimique & Suivi Temporel',
+    'Vitesse volumique, temps de demi-réaction et facteurs cinétiques.',
+    undefined,
+    [
+      {
+        id: 'pc6-1',
+        question_text: 'La vitesse volumique v(t) d’une réaction dans un volume constant V vaut :',
+        options: ['v = V · (dx/dt)', 'v = (1/V) · (dx/dt)', 'v = x / t', 'v = dx / dV'],
+        correct_index: 1,
+        explanation: 'v(t) = (1/V) · (dx/dt), déterminée graphiquement par le coefficient directeur de la tangente.',
+      },
+      {
+        id: 'pc6-2',
+        question_text: 'Au cours du temps, la vitesse volumique d’une réaction chimique :',
+        options: ['Augmente indéfiniment', 'Reste constante', 'Diminue puis s’annule', 'Devient négative'],
+        correct_index: 2,
+        explanation: 'La concentration des réactifs diminue au cours du temps, donc la fréquence des chocs efficaces diminue.',
+      },
+      {
+        id: 'pc6-3',
+        question_text: 'Un catalyseur modifie :',
+        options: ['L’état final xf', 'Le taux d’avancement τ', 'La vitesse de réaction (diminue t₁/₂)', 'La constante d’équilibre K'],
+        correct_index: 2,
+        explanation: 'Un catalyseur accélère la réaction sans modifier ni xf ni K.',
+      },
+    ]
+  ),
+  make2BacStage(
+    'Physique-Chimie',
+    7,
+    'pc-acide-base-national',
+    'Acide-Base, pH & Dosage (Annales Nationales)',
+    'Taux d’avancement τ, pKa, diagramme de prédominance et équivalence.',
+    'Examen National 2023 • Normale PC',
+    [
+      {
+        id: 'pc7-1',
+        question_text: 'Pour un couple HA/A⁻ de pKa = 4,8, si le pH de la solution vaut 6,0, quelle espèce prédomine ?',
+        options: ['L’acide HA', 'La base A⁻', 'Elles sont en quantités égales', 'Les ions H₃O⁺'],
+        correct_index: 1,
+        explanation: 'Lorsque pH > pKa, la forme basique A⁻ prédomine.',
+        exam_source: 'National 2023 • Normale',
+      },
+      {
+        id: 'pc7-2',
+        question_text: 'Lors du dosage d’un acide faible par une base forte, le pH à la demi-équivalence (V_B = V_BE / 2) est égal à :',
+        options: ['7', 'pKa', '2 × pKa', '14 - pKa'],
+        correct_index: 1,
+        explanation: 'À la demi-équivalence, [HA] = [A⁻] donc pH = pKa.',
+        exam_source: 'National 2022 • Normale',
+      },
+      {
+        id: 'pc7-3',
+        question_text: 'La constante d’équilibre K d’une réaction acide-base dépend uniquement de :',
+        options: ['La concentration initiale', 'La température', 'Le volume versé', 'La pression'],
+        correct_index: 1,
+        explanation: 'La constante d’équilibre K ne dépend que de la température.',
+        exam_source: 'National 2023 • Rattrapage',
+      },
+    ]
+  ),
+  make2BacStage(
+    'Physique-Chimie',
+    8,
+    'pc-piles-electrolyse-national',
+    'Piles & Électrolyse (Annales Nationales)',
+    'Anode/Cathode, sens du courant et quantité d’électricité Q = I·Δt.',
+    'Examen National 2022 • Normale PC',
+    [
+      {
+        id: 'pc8-1',
+        question_text: 'Dans une pile électrochimique en fonctionnement, quelle réaction a lieu à l’anode ?',
+        options: ['Une réduction', 'Une oxydation (perte d’électrons)', 'Aucune réaction', 'Une dilution'],
+        correct_index: 1,
+        explanation: 'Mnémotechnique : Anode = Oxydation (deux voyelles), Cathode = Réduction (deux consonnes).',
+        exam_source: 'National 2022 • Normale',
+      },
+      {
+        id: 'pc8-2',
+        question_text: 'La quantité d’électricité Q débitée par une pile de courant constant I pendant Δt vaut :',
+        options: ['Q = I / Δt', 'Q = I × Δt = n(e⁻) × F', 'Q = Δt / I', 'Q = F / I'],
+        correct_index: 1,
+        explanation: 'Q = I·Δt = n(e⁻)·F (avec F = 96 500 C/mol).',
+        exam_source: 'National 2023 • Normale',
+      },
+      {
+        id: 'pc8-3',
+        question_text: 'Dans le circuit extérieur d’une pile, les électrons circulent toujours :',
+        options: ['De la borne + vers la borne -', 'De la borne - (anode) vers la borne + (cathode)', 'Dans le pont salin uniquement', 'Dans les deux sens'],
+        correct_index: 1,
+        explanation: 'Les électrons sortent de l’anode (-) et vont vers la cathode (+), sens opposé au courant I.',
+        exam_source: 'National 2021 • Normale',
+      },
+    ]
+  ),
+  make2BacStage(
+    'Physique-Chimie',
+    9,
+    'pc-mecanique-newton-national',
+    'Mécanique de Newton & Satellites (Annales)',
+    '2ème loi de Newton, chute libre, plan incliné et 3ème loi de Kepler.',
+    'Examen National 2024 • Normale PC',
+    [
+      {
+        id: 'pc9-1',
+        question_text: 'Un solide glisse sans frottement sur un plan incliné d’un angle α par rapport à l’horizontale. Son accélération vaut :',
+        options: ['a = g · cos(α)', 'a = g · sin(α)', 'a = g · tan(α)', 'a = g'],
+        correct_index: 1,
+        explanation: 'Projection de P = m·g sur l’axe descendant : m·g·sin(α) = m·a ⇒ a = g·sin(α).',
+        exam_source: 'National 2024 • Normale',
+      },
+      {
+        id: 'pc9-2',
+        question_text: 'La vitesse v d’un satellite en orbite circulaire de rayon r autour de la Terre (masse M_T) vaut :',
+        options: ['v = G·M_T / r', 'v = √(G·M_T / r)', 'v = √(G·M_T · r)', 'v = G·M_T / r²'],
+        correct_index: 1,
+        explanation: 'G·M_T·m / r² = m·v² / r ⇒ v = √(G·M_T / r).',
+        exam_source: 'National 2023 • Normale',
+      },
+      {
+        id: 'pc9-3',
+        question_text: 'La 3ème loi de Kepler pour les planètes en orbite circulaire s’écrit :',
+        options: ['T / r = cte', 'T² / r³ = 4π² / (G·M)', 'T³ / r² = cte', 'T² · r³ = cte'],
+        correct_index: 1,
+        explanation: 'T² / r³ = 4π² / (G·M) = constante.',
+        exam_source: 'National 2024 • Normale',
+      },
+    ]
+  ),
+  make2BacStage(
+    'Physique-Chimie',
+    10,
+    'pc-boss-national',
+    '🏆 BOSS : Simulation Examen National PC',
+    'Épreuve complète mêlant Ondes, Électricité, Chimie et Mécanique (2022–2024).',
+    'Compilation Examens Nationaux PC 2022–2024',
+    [
+      {
+        id: 'pc10-1',
+        question_text: 'L’unité de la constante de temps τ = RC est :',
+        options: ['L’Ohm (Ω)', 'Le Farad (F)', 'La seconde (s)', 'Le Hertz (Hz)'],
+        correct_index: 2,
+        explanation: 'Par analyse dimensionnelle, [R][C] = (U/I)·(I·t/U) = [T] (secondes).',
+        exam_source: 'National 2024 • Normale',
+      },
+      {
+        id: 'pc10-2',
+        question_text: 'Si le pH d’une solution d’acide fort passe de 2 à 3, sa concentration [H₃O⁺] a été :',
+        options: ['Multipliée par 10', 'Divisée par 10', 'Divisée par 2', 'Augmentée de 1'],
+        correct_index: 1,
+        explanation: '[H₃O⁺] = 10⁻ᵖᴴ : passer de 10⁻² à 10⁻³ revient à diviser par 10 (dilution au dixième).',
+        exam_source: 'National 2023 • Normale',
+      },
+      {
+        id: 'pc10-3',
+        question_text: 'Lors d’une chute verticale libre sans vitesse initiale, l’équation horaire z(t) orientée vers le bas est :',
+        options: ['z(t) = g · t', 'z(t) = (1/2) g · t²', 'z(t) = g · t²', 'z(t) = v₀ · t'],
+        correct_index: 1,
+        explanation: 'a_z = g ⇒ v_z(t) = g·t ⇒ z(t) = ½·g·t².',
+        exam_source: 'National 2022 • Normale',
+      },
+      {
+        id: 'pc10-4',
+        question_text: 'Dans un circuit RLC en régime pseudopériodique, la diminution d’amplitude des oscillations est due à :',
+        options: ['La capacité C', 'L’inductance L', 'La dissipation d’énergie par effet Joule dans R', 'La fréquence'],
+        correct_index: 2,
+        explanation: 'La résistance R dissipe de l’énergie thermique par effet Joule (dE/dt = -R·i² ≤ 0).',
+        exam_source: 'National 2023 • Rattrapage',
+      },
+      {
+        id: 'pc10-5',
+        question_text: 'Une réaction d’estérification entre un acide carboxylique et un alcool est :',
+        options: ['Rapide et totale', 'Lente et limitée (réversible)', 'Instantanée et exothermique', 'Impossible à chaud'],
+        correct_index: 1,
+        explanation: 'L’estérification et l’hydrolyse sont lentes, limitées et athermiques.',
+        exam_source: 'National 2024 • Normale',
+      },
+    ]
+  ),
+
+  // =========================================================================
+  // 2ÈME BAC — SVT (NIVEAUX 1 À 10)
+  // =========================================================================
+  make2BacStage(
+    'SVT',
+    1,
+    'svt-glycolyse-respiration',
+    'Glycolyse & Respiration Cellulaire',
+    'Étapes clés de dégradation du glucose dans le hyaloplasme et la mitochondrie.',
+    undefined,
+    [
+      {
+        id: 's1-1',
+        question_text: 'Où se déroule la glycolyse dans la cellule ?',
+        options: ['Matrice mitochondriale', 'Hyaloplasme', 'Crêtes mitochondriales', 'Noyau'],
+        correct_index: 1,
+        explanation: 'La glycolyse a lieu dans le hyaloplasme sans consommation d’O₂.',
+      },
+      {
+        id: 's1-2',
+        question_text: 'Quel est le bilan énergétique global de la respiration cellulaire pour 1 glucose ?',
+        options: ['2 ATP', '18 ATP', '36 ou 38 ATP', '4 ATP'],
+        correct_index: 2,
+        explanation: 'La respiration réalise une oxydation complète du glucose et produit 36 à 38 ATP.',
+      },
+      {
+        id: 's1-3',
+        question_text: 'Quel est l’accepteur final d’électrons dans la chaîne respiratoire ?',
+        options: ['Le CO₂', 'Le dioxygène (O₂)', 'L’ATP', 'Le glucose'],
+        correct_index: 1,
+        explanation: 'O₂ capte les électrons et H⁺ pour former H₂O.',
+      },
+    ]
+  ),
+  make2BacStage(
+    'SVT',
+    2,
+    'svt-fermentation',
+    'Fermentations Lactique & Alcoolique',
+    'Comparaison des rendements énergétiques en milieu anaérobie.',
+    undefined,
+    [
+      {
+        id: 's2-1',
+        question_text: 'La fermentation lactique produit à partir de l’acide pyruvique :',
+        options: ['Éthanol + CO₂', 'Acide lactique sans CO₂', 'Eau + CO₂', '38 ATP'],
+        correct_index: 1,
+        explanation: 'La fermentation lactique ne dégage pas de CO₂.',
+      },
+      {
+        id: 's2-2',
+        question_text: 'Pourquoi le rendement de la fermentation (2 ATP) est-il faible par rapport à la respiration ?',
+        options: ['Elle consomme trop d’O₂', 'La dégradation du glucose est incomplète (résidu organique riche en énergie)', 'Elle détruit les mitochondries', 'Elle ne fait pas de glycolyse'],
+        correct_index: 1,
+        explanation: 'L’éthanol ou l’acide lactique contiennent encore une grande partie de l’énergie chimique potentielle.',
+      },
+      {
+        id: 's2-3',
+        question_text: 'Quelle est l’étape commune à la respiration et à la fermentation ?',
+        options: ['Le cycle de Krebs', 'La glycolyse', 'La chaîne respiratoire', 'La phosphorylation oxydative'],
+        correct_index: 1,
+        explanation: 'Les deux voies commencent par la glycolyse dans le hyaloplasme.',
+      },
+    ]
+  ),
+  make2BacStage(
+    'SVT',
+    3,
+    'svt-muscle',
+    'Contraction Musculaire & Régénération d’ATP',
+    'Sarcomère, filaments d’actine/myosine, ions Ca²⁺ et voies métaboliques.',
+    undefined,
+    [
+      {
+        id: 's3-1',
+        question_text: 'Quel ion permet la formation des ponts actomyosine lors de la contraction ?',
+        options: ['Na⁺', 'K⁺', 'Ca²⁺', 'Cl⁻'],
+        correct_index: 2,
+        explanation: 'Ca²⁺ se fixe sur la troponine et démasque les sites de liaison sur l’actine.',
+      },
+      {
+        id: 's3-2',
+        question_text: 'Lors de la contraction d’un sarcomère, quelle zone conserve une longueur constante ?',
+        options: ['La bande claire I', 'La zone H', 'La bande sombre A', 'La distance entre deux stries Z'],
+        correct_index: 2,
+        explanation: 'La bande sombre A correspond à la longueur fixe des myofilaments de myosine.',
+      },
+      {
+        id: 's3-3',
+        question_text: 'Quelle voie régénère l’ATP le plus rapidement lors d’un sprint de quelques secondes ?',
+        options: ['La respiration cellulaire', 'La voie anaérobie alactique (phosphocréatine)', 'La fermentation alcoolique', 'La digestion'],
+        correct_index: 1,
+        explanation: 'ADP + Phosphocréatine → ATP + Créatine est quasi instantanée.',
+      },
+    ]
+  ),
+  make2BacStage(
+    'SVT',
+    4,
+    'svt-adn-replication',
+    'ADN, Chromosomes & Réplication',
+    'Structure en double hélice, complémentarité des bases et phase S.',
+    undefined,
+    [
+      {
+        id: 's4-1',
+        question_text: 'Selon quel mode s’effectue la réplication de l’ADN en phase S ?',
+        options: ['Conservatif', 'Semi-conservatif', 'Dispersif', 'Aléatoire'],
+        correct_index: 1,
+        explanation: 'Chaque nouvelle molécule garde 1 brin ancien et synthétise 1 brin nouveau.',
+      },
+      {
+        id: 's4-2',
+        question_text: 'Dans l’ADN, la base Guanine (G) est toujours complémentaire de :',
+        options: ['Adénine (A)', 'Thymine (T)', 'Cytosine (C)', 'Uracile (U)'],
+        correct_index: 2,
+        explanation: 'Dans l’ADN : A s’apparie avec T, et G s’apparie avec C.',
+      },
+      {
+        id: 's4-3',
+        question_text: 'Quelle enzyme assure l’assemblage des nouveaux nucléotides lors de la réplication ?',
+        options: ['L’amylase', 'L’ADN polymérase', 'L’ARN polymérase', 'L’ATP synthase'],
+        correct_index: 1,
+        explanation: 'L’ADN polymérase polymérise le nouveau brin complémentaire d’ADN.',
+      },
+    ]
+  ),
+  make2BacStage(
+    'SVT',
+    5,
+    'svt-expression-genetique',
+    'Transcription & Traduction (Synthèse Protéique)',
+    'De l’ADN à l’ARNm puis à la protéine via le code génétique.',
+    undefined,
+    [
+      {
+        id: 's5-1',
+        question_text: 'Lors de la transcription, la base A du brin transcrit d’ADN donne sur l’ARNm :',
+        options: ['T', 'U', 'C', 'G'],
+        correct_index: 1,
+        explanation: 'L’ARNm contient de l’Uracile (U) à la place de la Thymine (T).',
+      },
+      {
+        id: 's5-2',
+        question_text: 'Où se déroule la traduction de l’ARNm en protéine ?',
+        options: ['Dans le noyau', 'Dans le cytoplasme au niveau des ribosomes', 'Dans la mitochondrie uniquement', 'Dans la membrane'],
+        correct_index: 1,
+        explanation: 'Les ribosomes cytoplasmiques lisent l’ARNm codon par codon.',
+      },
+      {
+        id: 's5-3',
+        question_text: 'Quel rôle joue l’ARNt pendant la traduction ?',
+        options: ['Transporter l’acide aminé correspondant à son anticodon', 'Copier l’ADN', 'Détruire l’ARNm', 'Produire du glucose'],
+        correct_index: 0,
+        explanation: 'L’ARNt porte un anticodon complémentaire du codon de l’ARNm et apporte l’acide aminé spécifique.',
+      },
+    ]
+  ),
+  make2BacStage(
+    'SVT',
+    6,
+    'svt-mitose-meiose',
+    'Mitose, Méiose & Brassage Génétique',
+    'Maintien du caryotype, brassage intrachromosomique et interchromosomique.',
+    undefined,
+    [
+      {
+        id: 's6-1',
+        question_text: 'Le crossing-over (brassage intrachromosomique) se produit pendant :',
+        options: ['La métaphase II', 'La prophase I de la méiose', 'L’anaphase de la mitose', 'La télophase II'],
+        correct_index: 1,
+        explanation: 'En prophase I, les chromosomes homologues appariés échangent des fragments de chromatides.',
+      },
+      {
+        id: 's6-2',
+        question_text: 'À l’issue de la méiose, une cellule mère diploïde (2n) donne :',
+        options: ['2 cellules diploïdes (2n)', '4 cellules haploïdes (n)', '2 cellules haploïdes (n)', '4 cellules diploïdes (2n)'],
+        correct_index: 1,
+        explanation: 'La méiose produit 4 gamètes haploïdes (n) génétiquement diversifiés.',
+      },
+      {
+        id: 's6-3',
+        question_text: 'Pendant quelle phase de la mitose les chromatides sœurs se séparent-elles ?',
+        options: ['Prophase', 'Métaphase', 'Anaphase', 'Télophase'],
+        correct_index: 2,
+        explanation: 'En anaphase, le clivage du centromère permet la migration des chromatides vers les pôles opposés.',
+      },
+    ]
+  ),
+  make2BacStage(
+    'SVT',
+    7,
+    'svt-mendel-national',
+    'Lois de Mendel & Croisements (Annales)',
+    'Monohybridisme, dihybridisme, gènes indépendants et liés.',
+    'Examen National 2023 • Normale SVT',
+    [
+      {
+        id: 's7-1',
+        question_text: 'Un croisement entre deux lignées pures donne une F1 100 % homogène. Cela vérifie :',
+        options: ['La 1ère loi de Mendel (uniformité des hybrides F1)', 'La codominance obligatoire', 'Une mutation', 'L’hérédité liée au sexe'],
+        correct_index: 0,
+        explanation: 'Si les parents sont homozygotes (lignées pures), toute la génération F1 est uniforme.',
+        exam_source: 'National 2023 • Normale',
+      },
+      {
+        id: 's7-2',
+        question_text: 'Un test-cross (croisement-test) pour deux gènes indépendants donne classiquement les proportions :',
+        options: ['9/16 ; 3/16 ; 3/16 ; 1/16', '25 % ; 25 % ; 25 % ; 25 %', '75 % ; 25 %', '50 % ; 50 %'],
+        correct_index: 1,
+        explanation: 'Test-cross (F1 × double récessif) pour 2 gènes indépendants = 4 phénotypes équiprobables (1/4 chacun).',
+        exam_source: 'National 2022 • Normale',
+      },
+      {
+        id: 's7-3',
+        question_text: 'Si un test-cross donne beaucoup plus de phénotypes parentaux que de recombinés, les 2 gènes sont :',
+        options: ['Indépendants', 'Liés (sur le même chromosome) avec crossing-over', 'Létaux', 'Identiques'],
+        correct_index: 1,
+        explanation: '% Parentaux >> % Recombinés prouve que les gènes sont liés avec recombinaison partielle.',
+        exam_source: 'National 2023 • Rattrapage',
+      },
+    ]
+  ),
+  make2BacStage(
+    'SVT',
+    8,
+    'svt-genetique-humaine-national',
+    'Génétique Humaine & Arbres Généalogiques',
+    'Transmission autosomale / gonosomale, dominante ou récessive.',
+    'Examen National 2022 • Normale SVT',
+    [
+      {
+        id: 's8-1',
+        question_text: 'Dans un arbre généalogique, deux parents sains ont un enfant malade. L’allèle responsable de la maladie est :',
+        options: ['Dominant', 'Récessif', 'Porté par le chromosome Y', 'Toujours létal'],
+        correct_index: 1,
+        explanation: 'Deux parents phénotypiquement sains donnant un enfant atteint sont hétérozygotes porteurs d’un allèle récessif.',
+        exam_source: 'National 2022 • Normale',
+      },
+      {
+        id: 's8-2',
+        question_text: 'Si un père atteint d’une maladie récessive liée à X a une fille saine, cette fille est :',
+        options: ['Homozygote saine', 'Hétérozygote conductrice (vectrice)', 'Atteinte', 'Sans chromosome X'],
+        correct_index: 1,
+        explanation: 'La fille reçoit obligatoirement le chromosome X porteur de l’allèle muté de son père.',
+        exam_source: 'National 2021 • Normale',
+      },
+      {
+        id: 's8-3',
+        question_text: 'Une maladie transmise exclusivement de père en fils est portée par :',
+        options: ['Un autosome', 'Le chromosome X', 'Le chromosome Y', 'L’ADN mitochondrial'],
+        correct_index: 2,
+        explanation: 'Seuls les garçons héritent du chromosome Y de leur père.',
+        exam_source: 'National 2023 • Normale',
+      },
+    ]
+  ),
+  make2BacStage(
+    'SVT',
+    9,
+    'svt-geologie-national',
+    'Géologie : Subduction, Obduction & Collision',
+    'Chaînes de montagnes récentes, métamorphisme et granitisation.',
+    'Examen National 2024 • Normale SVT',
+    [
+      {
+        id: 's9-1',
+        question_text: 'Quel phénomène caractérise le plongement d’une lithosphère océanique dense sous une lithosphère continentale ?',
+        options: ['L’obduction', 'La subduction', 'L’accrétion', 'L’érosion'],
+        correct_index: 1,
+        explanation: 'La subduction correspond à l’enfouissement de la plaque océanique plus dense dans l’asthénosphère.',
+        exam_source: 'National 2024 • Normale',
+      },
+      {
+        id: 's9-2',
+        question_text: 'La présence d’ophiolites (lambeaux de lithosphère océanique) sur un continent témoigne d’une :',
+        options: ['Obduction / suture ophiolitique', 'Sédimentation fluviatile', 'Érosion éolienne', 'Faille normale'],
+        correct_index: 0,
+        explanation: 'Les ophiolites résultent du chevauchement de la lithosphère océanique sur la croûte continentale.',
+        exam_source: 'National 2023 • Normale',
+      },
+      {
+        id: 's9-3',
+        question_text: 'Le métamorphisme de subduction est caractérisé par :',
+        options: ['Haute Température / Basse Pression', 'Haute Pression / Basse Température (HP-BT)', 'Basse Pression / Basse Température', 'Fusion immédiate en surface'],
+        correct_index: 1,
+        explanation: 'La plaque océanique froide s’enfonce vite : la pression monte fortement tandis que la température reste basse (HP-BT).',
+        exam_source: 'National 2024 • Normale',
+      },
+    ]
+  ),
+  make2BacStage(
+    'SVT',
+    10,
+    'svt-boss-national',
+    '🏆 BOSS : Simulation Examen National SVT',
+    'Épreuve complète de synthèse : ATP, Génétique, Immunité & Géologie (2022–2024).',
+    'Compilation Examens Nationaux SVT 2022–2024',
+    [
+      {
+        id: 's10-1',
+        question_text: 'Les sphères pédonculées (ATP synthase) situées sur la membrane interne mitochondriale produisent l’ATP grâce au :',
+        options: ['Flux de protons H⁺ de l’espace intermembranaire vers la matrice', 'Flux d’O₂ vers le noyau', 'Flux de glucose', 'Gradient de Na⁺'],
+        correct_index: 0,
+        explanation: 'Le retour des protons H⁺ selon leur gradient électrochimique active l’ATP synthase (ADP + Pi → ATP).',
+        exam_source: 'National 2024 • Normale',
+      },
+      {
+        id: 's10-2',
+        question_text: 'Un codage d’ARNm commence presque toujours par le codon initiateur :',
+        options: ['UAA', 'UAG', 'AUG', 'UGA'],
+        correct_index: 2,
+        explanation: 'AUG est le codon initiateur (Méthionine) ; UAA, UAG et UGA sont les 3 codons STOP.',
+        exam_source: 'National 2023 • Normale',
+      },
+      {
+        id: 's10-3',
+        question_text: 'Dans la réponse immunitaire spécifique à médiation cellulaire, la destruction des cellules infectées est assurée par :',
+        options: ['Les plasmocytes', 'Les lymphocytes T cytotoxiques (LTc)', 'Les hématies', 'Les plaquettes'],
+        correct_index: 1,
+        explanation: 'Les LTc libèrent perforine et granzymes pour provoquer la lyse des cellules infectées ou cancéreuses.',
+        exam_source: 'National 2022 • Normale',
+      },
+      {
+        id: 's10-4',
+        question_text: 'L’andésite est une roche magmatique volcanique typique des zones de :',
+        options: ['Dorsale océanique', 'Subduction', 'Bassin sédimentaire calme', 'Rift continental'],
+        correct_index: 1,
+        explanation: 'La déshydratation de la plaque plongeante provoque la fusion partielle de la péridotite et un volcanisme andésitique.',
+        exam_source: 'National 2024 • Normale',
+      },
+      {
+        id: 's10-5',
+        question_text: 'Si un couple sain donne naissance à une fille atteinte d’une maladie héréditaire, la transmission est obligatoirement :',
+        options: ['Liée à X récessive', 'Autosomale récessive', 'Liée à Y', 'Dominante'],
+        correct_index: 1,
+        explanation: 'Si c’était lié à X récessif, la fille malade (XᵐXᵐ) aurait obligatoirement un père malade (XᵐY), or le père est sain ! Donc autosomale récessive.',
+        exam_source: 'National 2023 • Normale',
+      },
+    ]
+  ),
+];

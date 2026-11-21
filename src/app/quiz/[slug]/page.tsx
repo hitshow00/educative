@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getQuizBySlug } from '@/lib/quizzes';
+import { getNextStageQuiz, getQuizBySlug } from '@/lib/quizzes';
 import { QuizPlayer } from './QuizPlayer';
 
 export const dynamic = 'force-dynamic';
@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: QuizPageProps): Promise<Metad
   if (!quiz) return { title: 'Quiz introuvable | ExamQuiz.ma' };
 
   return {
-    title: `Quiz ${quiz.subject} : ${quiz.chapter_title} (${quiz.level.toUpperCase()}) | ExamQuiz.ma`,
+    title: `Niveau ${quiz.stage_number} — ${quiz.subject} : ${quiz.chapter_title} | ExamQuiz.ma`,
     description: quiz.description,
   };
 }
@@ -25,5 +25,7 @@ export default async function QuizPage({ params }: QuizPageProps) {
   const quiz = await getQuizBySlug(params.slug);
   if (!quiz) notFound();
 
-  return <QuizPlayer quiz={quiz} />;
+  const nextStage = await getNextStageQuiz(quiz);
+
+  return <QuizPlayer quiz={quiz} nextStage={nextStage} />;
 }

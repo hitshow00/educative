@@ -1,6 +1,6 @@
 import { createClient } from '@/utils/supabase/server';
 import { CURRICULUM_QUIZZES } from '@/data/curriculum';
-import type { LevelId, Quiz, QuizQuestion } from '@/types/quiz';
+import type { LevelId, Quiz, QuizDifficulty, QuizQuestion } from '@/types/quiz';
 
 interface SupabaseQuizRow {
   id: string;
@@ -8,10 +8,12 @@ interface SupabaseQuizRow {
   level: LevelId;
   branch: string;
   subject: string;
+  stage_number?: number;
   chapter_title: string;
   description: string;
   exam_type: 'National' | 'Régional' | 'Local' | 'Provincial';
-  difficulty: 'Facile' | 'Moyen' | 'Examen';
+  exam_source?: string | null;
+  difficulty: QuizDifficulty;
   estimated_minutes: number;
   questions: Array<{
     id: string;
@@ -25,8 +27,7 @@ interface SupabaseQuizRow {
 }
 
 /**
- * Charge tous les quiz (fusionne les quiz publiés dans Supabase avec la banque intégrée).
- * Si un quiz Supabase partage le même `slug`, la version Supabase est prioritaire.
+ * Charge tous les quiz (fusionne les quiz publiés dans Supabase avec les parcours 10 niveaux intégrés).
  */
 export async function getAllQuizzes(): Promise<Quiz[]> {
   const bySlug = new Map<string, Quiz>();
@@ -39,10 +40,10 @@ export async function getAllQuizzes(): Promise<Quiz[]> {
     const { data, error } = await supabase
       .from('quizzes')
       .select(
-        'id, slug, level, branch, subject, chapter_title, description, exam_type, difficulty, estimated_minutes, questions(id, question_text, options, correct_index, explanation, exam_tip, order_index)'
+        'id, slug, level, branch, subject, stage_number, chapter_title, description, exam_type, exam_source, difficulty, estimated_minutes, questions(id, question_text, options, correct_index, explanation, exam_tip, order_index)'
       )
       .eq('is_published', true)
-      .order('created_at', { ascending: false });
+      .order('stage_number', { ascending: true });
 
     if (!error && Array.isArray(data)) {
       for (const row of data as unknown as SupabaseQuizRow[]) {
@@ -64,10 +65,12 @@ export async function getAllQuizzes(): Promise<Quiz[]> {
             level: row.level,
             branch: row.branch,
             subject: row.subject,
+            stage_number: row.stage_number || 1,
             chapter_title: row.chapter_title,
             description: row.description,
             exam_type: row.exam_type,
-            difficulty: row.difficulty,
+            exam_source: row.exam_source || undefined,
+            difficulty: row.difficulty || 'Moyen',
             estimated_minutes: row.estimated_minutes,
             questions: sortedQuestions,
           });
@@ -75,13 +78,25 @@ export async function getAllQuizzes(): Promise<Quiz[]> {
       }
     }
   } catch {
-    // Fallback silencieux sur CURRICULUM_QUIZZES si les tables ne sont pas encore créées
+    // Fallback silencieux sur CURRICULUM_QUIZZES
   }
 
-  return Array.from(bySlug.values());
+  return Array.from(bySlug.values()).sort((a, b) => a.stage_number - b.stage_number);
 }
 
 export async function getQuizBySlug(slug: string): Promise<Quiz | null> {
   const all = await getAllQuizzes();
   return all.find((q) => q.slug === slug) || null;
+}
+
+export async function getNextStageQuiz(current: Quiz): Promise<Quiz | null> {
+  const all = await getAllQuizzes();
+  return (
+    all.find(
+      (q) =>
+        q.level === current.level &&
+        q.subject === current.subject &&
+        q.stage_number === current.stage_number + 1
+    ) || null
+  );
 }

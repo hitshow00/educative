@@ -10,11 +10,15 @@ import {
   BookOpen,
   CheckCircle2,
   Clock,
+  Crown,
   Flame,
   Lightbulb,
   RotateCcw,
   Sparkles,
+  Star,
   Timer,
+  Trophy,
+  Unlock,
   XCircle,
 } from 'lucide-react';
 import { getSubjectStyle, type Quiz, type QuizMode, type QuizQuestion } from '@/types/quiz';
@@ -22,21 +26,25 @@ import {
   formatDuration,
   formatScore20,
   getMentionMaroc,
+  loadProgress,
   recordAttempt,
 } from '@/lib/progress';
+import { playCorrectSound, playVictorySound, playWrongSound } from '@/lib/sound';
 import { createClient } from '@/utils/supabase/client';
 
 const LETTERS = ['A', 'B', 'C', 'D'];
 
 interface QuizPlayerProps {
   quiz: Quiz;
+  nextStage: Quiz | null;
 }
 
-export function QuizPlayer({ quiz }: QuizPlayerProps) {
+export function QuizPlayer({ quiz, nextStage }: QuizPlayerProps) {
   const supabase = useMemo(() => createClient(), []);
   const style = getSubjectStyle(quiz.subject);
+  const isBoss = quiz.stage_number === 10;
 
-  const [mode, setMode] = useState<QuizMode>('training');
+  const [mode, setMode] = useState<QuizMode>(isBoss ? 'exam' : 'training');
   const [activeQuestions, setActiveQuestions] = useState<QuizQuestion[]>(quiz.questions);
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
@@ -47,6 +55,9 @@ export function QuizPlayer({ quiz }: QuizPlayerProps) {
   const [finished, setFinished] = useState(false);
   const [xpEarned, setXpEarned] = useState(0);
   const [finalScore20, setFinalScore20] = useState(0);
+  const [earnedStars, setEarnedStars] = useState(0);
+  const [dailyBonus, setDailyBonus] = useState(false);
+  const [unlockedNext, setUnlockedNext] = useState(false);
   const [wrongIndices, setWrongIndices] = useState<number[]>([]);
 
   // Chronomètre
@@ -72,21 +83,29 @@ export function QuizPlayer({ quiz }: QuizPlayerProps) {
         }
       });
 
-      const { score20, xpEarned: gained } = recordAttempt({
+      const res = recordAttempt({
         quiz,
         correctCount,
         totalCount: activeQuestions.length,
         durationSeconds: seconds,
         mode,
         wrongIndices: wrongs,
+        bestCombo,
       });
 
       setWrongIndices(wrongs);
-      setFinalScore20(score20);
-      setXpEarned(gained);
+      setFinalScore20(res.score20);
+      setEarnedStars(res.stars);
+      setXpEarned(res.xpEarned);
+      setDailyBonus(res.dailyBonusEarned);
+      setUnlockedNext(res.unlockedNext);
       setFinished(true);
 
-      // Synchronisation cloud silencieuse si l'élève est connecté à Supabase
+      if (res.score20 >= 10) {
+        playVictorySound(res.store.soundEnabled);
+      }
+
+      // Synchronisation cloud silencieuse si l'élève est connecté
       try {
         const {
           data: { user },
@@ -99,7 +118,7 @@ export function QuizPlayer({ quiz }: QuizPlayerProps) {
               level: quiz.level,
               subject: quiz.subject,
               chapter_title: quiz.chapter_title,
-              score_20: score20,
+              score_20: res.score20,
               correct_count: correctCount,
               total_count: activeQuestions.length,
               duration_seconds: seconds,
@@ -109,29 +128,32 @@ export function QuizPlayer({ quiz }: QuizPlayerProps) {
           ]);
         }
       } catch {
-        // La sauvegarde localStorage est déjà assurée
+        // Sauvegarde locale déjà assurée
       }
     },
-    [activeQuestions, mode, quiz, seconds, supabase]
+    [activeQuestions, bestCombo, mode, quiz, seconds, supabase]
   );
 
   const handleSelectOption = useCallback(
     (optIdx: number) => {
       if (finished) return;
-      if (mode === 'training' && isLocked) return;
+      if ((mode === 'training' || mode === 'mistakes') && isLocked) return;
 
       const updatedAnswers = { ...answers, [index]: optIdx };
       setAnswers(updatedAnswers);
 
       if (mode === 'training' || mode === 'mistakes') {
         setIsLocked(true);
+        const soundOn = loadProgress().soundEnabled;
         if (optIdx === currentQuestion.correct_index) {
+          playCorrectSound(soundOn);
           setCombo((prev) => {
             const next = prev + 1;
             setBestCombo((best) => Math.max(best, next));
             return next;
           });
         } else {
+          playWrongSound(soundOn);
           setCombo(0);
         }
       }
@@ -192,22 +214,57 @@ export function QuizPlayer({ quiz }: QuizPlayerProps) {
     const correctCount = total - wrongIndices.length;
     const pct = Math.round((correctCount / total) * 100);
     const mention = getMentionMaroc(finalScore20);
+    const canGoNextStage = Boolean(nextStage && finalScore20 >= 10);
 
     return (
       <main className="max-w-3xl mx-auto px-4 py-6 sm:py-10 space-y-6">
         <section className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 text-center space-y-6">
           <div className="space-y-2">
             <span className={`inline-block text-xs font-bold px-3 py-1 rounded-full ${style.bg} ${style.text}`}>
-              {quiz.subject} • {quiz.chapter_title}
+              Niveau {quiz.stage_number} • {quiz.subject} — {quiz.chapter_title}
             </span>
             <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900">
-              {mode === 'exam' ? 'Examen Blanc Terminé !' : 'Session de Révision Terminée !'}
+              {isBoss && finalScore20 >= 12
+                ? '🏆 Boss Examen Vaincu !'
+                : finalScore20 >= 10
+                ? 'Niveau Validé !'
+                : 'Continue ton entraînement !'}
             </h1>
+          </div>
+
+          {/* 3 Étoiles dorées */}
+          <div className="flex items-center justify-center gap-2">
+            {[1, 2, 3].map((n) => (
+              <Star
+                key={n}
+                className={`w-9 h-9 transition-transform ${
+                  n <= earnedStars
+                    ? 'fill-amber-400 text-amber-400 scale-110'
+                    : 'text-slate-200'
+                }`}
+              />
+            ))}
+          </div>
+
+          {/* Bannières récompenses (Niveau débloqué / Défi du jour) */}
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {unlockedNext && nextStage && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3.5 py-1 text-xs font-bold text-emerald-700">
+                <Unlock className="w-3.5 h-3.5" />
+                Niveau {nextStage.stage_number} débloqué !
+              </span>
+            )}
+            {dailyBonus && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 border border-indigo-200 px-3.5 py-1 text-xs font-bold text-indigo-700">
+                <Sparkles className="w-3.5 h-3.5" />
+                Défi du jour réussi : +100 XP bonus !
+              </span>
+            )}
           </div>
 
           <div className="rounded-2xl bg-slate-50 border border-slate-200 p-6 space-y-3">
             <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Ta note estimée
+              Ta note sur 20
             </p>
             <p className="text-5xl font-extrabold text-slate-900 tabular-nums">
               {formatScore20(finalScore20)}{' '}
@@ -239,7 +296,7 @@ export function QuizPlayer({ quiz }: QuizPlayerProps) {
                 </p>
               </div>
               <div>
-                <p className="text-slate-500">Meilleur combo</p>
+                <p className="text-slate-500">Combo max</p>
                 <p className="text-sm font-bold text-slate-900 mt-0.5">
                   {bestCombo > 0 ? `${bestCombo} d’affilée` : '—'}
                 </p>
@@ -248,7 +305,17 @@ export function QuizPlayer({ quiz }: QuizPlayerProps) {
           </div>
 
           {/* Boutons d'action */}
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-3 justify-center">
+            {canGoNextStage && nextStage && (
+              <Link
+                href={`/quiz/${nextStage.slug}`}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm px-6 py-3 transition-colors shadow-sm"
+              >
+                <span>Passer au Niveau {nextStage.stage_number}</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            )}
+
             {wrongIndices.length > 0 && (
               <button
                 type="button"
@@ -263,22 +330,23 @@ export function QuizPlayer({ quiz }: QuizPlayerProps) {
             <button
               type="button"
               onClick={() => restart(mode, quiz.questions)}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 hover:bg-indigo-600 text-white font-semibold text-sm px-5 py-3 transition-colors"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm px-5 py-3 transition-colors"
             >
               <RotateCcw className="w-4 h-4" />
-              <span>Recommencer tout le quiz</span>
+              <span>Rejouer</span>
             </button>
 
             <Link
-              href="/progression"
+              href="/classement"
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm px-5 py-3 transition-colors"
             >
-              <span>Voir ma progression</span>
+              <Trophy className="w-4 h-4 text-amber-500" />
+              <span>Voir mon rang</span>
             </Link>
           </div>
         </section>
 
-        {/* Correction complète question par question */}
+        {/* Correction détaillée */}
         <section className="space-y-3">
           <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500">
             Correction détaillée ({total} questions)
@@ -296,9 +364,16 @@ export function QuizPlayer({ quiz }: QuizPlayerProps) {
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <p className="text-sm font-bold text-slate-900">
-                    {idx + 1}. {q.question_text}
-                  </p>
+                  <div className="space-y-1">
+                    {q.exam_source && (
+                      <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-700">
+                        📄 {q.exam_source}
+                      </span>
+                    )}
+                    <p className="text-sm font-bold text-slate-900">
+                      {idx + 1}. {q.question_text}
+                    </p>
+                  </div>
                   {isRight ? (
                     <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
                   ) : (
@@ -347,10 +422,9 @@ export function QuizPlayer({ quiz }: QuizPlayerProps) {
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Tous les quiz</span>
+          <span>Retour au parcours 10 niveaux</span>
         </Link>
 
-        {/* Bascule Mode Entraînement vs Mode Examen Blanc */}
         {index === 0 && Object.keys(answers).length === 0 && mode !== 'mistakes' && (
           <div className="inline-flex rounded-xl bg-slate-200/70 p-1 text-xs font-semibold">
             <button
@@ -383,24 +457,24 @@ export function QuizPlayer({ quiz }: QuizPlayerProps) {
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2">
-              <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${style.bg} ${style.text}`}>
-                {quiz.subject}
+              <span
+                className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full ${
+                  isBoss ? 'bg-slate-900 text-amber-300' : `${style.bg} ${style.text}`
+                }`}
+              >
+                {isBoss && <Crown className="w-3.5 h-3.5" />}
+                Niv. {quiz.stage_number} • {quiz.subject}
               </span>
               <span className="text-xs font-semibold text-slate-500">
                 Question {index + 1} / {total}
               </span>
-              {mode === 'mistakes' && (
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">
-                  Mode Erreurs
-                </span>
-              )}
             </div>
 
             <div className="flex items-center gap-2">
               {combo >= 2 && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2.5 py-0.5 text-xs font-bold text-amber-700">
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2.5 py-0.5 text-xs font-extrabold text-amber-700 animate-pulse">
                   <Flame className="w-3.5 h-3.5" />
-                  {combo} d’affilée !
+                  Combo x{combo}
                 </span>
               )}
               <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700 tabular-nums">
@@ -410,7 +484,7 @@ export function QuizPlayer({ quiz }: QuizPlayerProps) {
             </div>
           </div>
 
-          <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+          <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-300 ${style.bar}`}
               style={{ width: `${progressPct}%` }}
@@ -418,9 +492,16 @@ export function QuizPlayer({ quiz }: QuizPlayerProps) {
           </div>
         </div>
 
-        {/* Énoncé de la question */}
-        <div className="space-y-1.5">
-          <p className="text-xs font-medium text-slate-400">{quiz.chapter_title}</p>
+        {/* Source officielle + Énoncé */}
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs font-semibold text-slate-400">{quiz.chapter_title}</p>
+            {(currentQuestion.exam_source || quiz.exam_source) && (
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100">
+                📄 {currentQuestion.exam_source || quiz.exam_source}
+              </span>
+            )}
+          </div>
           <h1 className="text-lg sm:text-xl font-bold text-slate-900 leading-snug">
             {currentQuestion.question_text}
           </h1>
@@ -433,21 +514,21 @@ export function QuizPlayer({ quiz }: QuizPlayerProps) {
             const isCorrect = optIdx === currentQuestion.correct_index;
 
             let optionClasses =
-              'border-slate-200 bg-slate-50/70 hover:bg-slate-100 hover:border-slate-300 text-slate-900';
+              'border-slate-200 bg-slate-50/70 hover:bg-slate-100 hover:border-slate-300 text-slate-900 active:scale-[0.99]';
             let badgeClasses = 'bg-white border-slate-300 text-slate-600';
 
             if (mode === 'exam' && isSelected) {
-              optionClasses = 'border-indigo-600 bg-indigo-50 text-indigo-950';
+              optionClasses = 'border-indigo-600 bg-indigo-50 text-indigo-950 scale-[1.01]';
               badgeClasses = 'bg-indigo-600 border-indigo-600 text-white';
             } else if ((mode === 'training' || mode === 'mistakes') && isLocked) {
               if (isCorrect) {
-                optionClasses = 'border-emerald-500 bg-emerald-50 text-emerald-950';
+                optionClasses = 'border-emerald-500 bg-emerald-50 text-emerald-950 scale-[1.01]';
                 badgeClasses = 'bg-emerald-600 border-emerald-600 text-white';
               } else if (isSelected) {
                 optionClasses = 'border-red-500 bg-red-50 text-red-950';
                 badgeClasses = 'bg-red-600 border-red-600 text-white';
               } else {
-                optionClasses = 'border-slate-200 bg-white text-slate-400 opacity-70';
+                optionClasses = 'border-slate-200 bg-white text-slate-400 opacity-65';
               }
             }
 
@@ -470,7 +551,7 @@ export function QuizPlayer({ quiz }: QuizPlayerProps) {
           })}
         </div>
 
-        {/* Encadré Explication + Piège d'examen (Mode Entraînement) */}
+        {/* Encadré Explication + Piège d'examen */}
         {(mode === 'training' || mode === 'mistakes') && isLocked && (
           <div className="space-y-3 pt-1">
             <div className="rounded-xl bg-slate-50 border border-slate-200 border-l-4 border-l-indigo-600 p-4 text-sm text-slate-700 space-y-1">
@@ -500,7 +581,7 @@ export function QuizPlayer({ quiz }: QuizPlayerProps) {
             className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 hover:bg-indigo-600 text-white font-bold text-sm sm:text-base py-3.5 px-5 transition-colors"
           >
             <span>
-              {index < total - 1 ? 'Question suivante' : 'Terminer et voir ma note / 20'}
+              {index < total - 1 ? 'Question suivante' : 'Terminer et voir mon score / 20'}
             </span>
             <ArrowRight className="w-4 h-4" />
           </button>

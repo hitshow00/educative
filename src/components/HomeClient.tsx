@@ -4,28 +4,34 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight,
+  Award,
   CheckCircle2,
-  Clock,
+  Crown,
   Flame,
-  HelpCircle,
-  Search,
+  Lock,
+  Play,
   Sparkles,
-  Target,
-  TrendingUp,
+  Star,
+  Trophy,
+  Unlock,
 } from 'lucide-react';
 import {
   LEVELS,
+  getLeagueForXp,
   getSubjectStyle,
   type LevelId,
   type ProgressStore,
   type Quiz,
 } from '@/types/quiz';
 import {
+  buildLeaderboard,
   computeStreak,
   formatScore20,
   getDefaultStore,
   loadProgress,
   setSelectedLevel,
+  todayIso,
+  toggleFreeAccess,
 } from '@/lib/progress';
 
 interface HomeClientProps {
@@ -34,11 +40,13 @@ interface HomeClientProps {
 
 export function HomeClient({ quizzes }: HomeClientProps) {
   const [store, setStore] = useState<ProgressStore>(getDefaultStore);
-  const [selectedSubject, setSelectedSubject] = useState<string>('ALL');
-  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedSubject, setSelectedSubject] = useState<string>('');
 
   useEffect(() => {
-    setStore(loadProgress());
+    const sync = () => setStore(loadProgress());
+    sync();
+    window.addEventListener('examquiz-progress', sync);
+    return () => window.removeEventListener('examquiz-progress', sync);
   }, []);
 
   const activeLevelInfo = useMemo(
@@ -57,285 +65,447 @@ export function HomeClient({ quizzes }: HomeClientProps) {
     return Array.from(set);
   }, [levelQuizzes]);
 
-  const filteredQuizzes = useMemo(() => {
-    const qLower = searchQuery.trim().toLowerCase();
-    return levelQuizzes.filter((quiz) => {
-      const matchSubj = selectedSubject === 'ALL' || quiz.subject === selectedSubject;
-      const matchSearch =
-        !qLower ||
-        quiz.chapter_title.toLowerCase().includes(qLower) ||
-        quiz.subject.toLowerCase().includes(qLower) ||
-        quiz.description.toLowerCase().includes(qLower);
-      return matchSubj && matchSearch;
-    });
-  }, [levelQuizzes, selectedSubject, searchQuery]);
+  const activeSubject = useMemo(() => {
+    if (selectedSubject && subjects.includes(selectedSubject)) return selectedSubject;
+    return subjects[0] || '';
+  }, [selectedSubject, subjects]);
 
-  // Stats rapides du niveau actif
-  const levelStats = useMemo(() => {
-    let completed = 0;
-    let sum20 = 0;
-    for (const q of levelQuizzes) {
-      const rec = store.records[q.slug];
+  // Parcours 1 → 10 de la matière sélectionnée
+  const trackStages = useMemo(
+    () =>
+      levelQuizzes
+        .filter((q) => q.subject === activeSubject)
+        .sort((a, b) => a.stage_number - b.stage_number),
+    [levelQuizzes, activeSubject]
+  );
+
+  const trackStats = useMemo(() => {
+    let earnedStars = 0;
+    let passedCount = 0;
+    for (const stage of trackStages) {
+      const rec = store.records[stage.slug];
       if (rec) {
-        completed += 1;
-        sum20 += rec.bestScore20;
+        earnedStars += rec.stars || 0;
+        if (rec.bestScore20 >= 10) passedCount += 1;
       }
     }
-    const avg20 = completed > 0 ? sum20 / completed : null;
-    const streak = computeStreak(store.activeDays);
-    return { completed, total: levelQuizzes.length, avg20, streak };
-  }, [levelQuizzes, store]);
+    return {
+      earnedStars,
+      maxStars: trackStages.length * 3,
+      passedCount,
+      total: trackStages.length,
+    };
+  }, [trackStages, store.records]);
+
+  const league = useMemo(() => getLeagueForXp(store.xp), [store.xp]);
+  const rankInfo = useMemo(
+    () => buildLeaderboard(store, store.selectedLevel),
+    [store]
+  );
+  const dailyDone = store.dailyChallengeDoneDate === todayIso();
+  const streak = computeStreak(store.activeDays);
 
   function handleLevelSwitch(level: LevelId) {
-    const updated = setSelectedLevel(level);
-    setStore(updated);
-    setSelectedSubject('ALL');
+    setStore(setSelectedLevel(level));
+    setSelectedSubject('');
   }
 
+  function handleFreeAccessToggle() {
+    setStore(toggleFreeAccess());
+  }
+
+  // Détermine si un niveau (1..10) est débloqué
+  function isStageUnlocked(stageIndex: number): boolean {
+    if (store.freeAccess || stageIndex === 0) return true;
+    const prevStage = trackStages[stageIndex - 1];
+    if (!prevStage) return true;
+    const prevRec = store.records[prevStage.slug];
+    return Boolean(prevRec && prevRec.bestScore20 >= 10);
+  }
+
+  // Trouve le prochain niveau recommandé à jouer
+  const nextRecommendedStage = useMemo(() => {
+    for (let i = 0; i < trackStages.length; i++) {
+      const rec = store.records[trackStages[i].slug];
+      if (!rec || rec.bestScore20 < 10) {
+        return trackStages[i];
+      }
+    }
+    return trackStages[trackStages.length - 1] || null;
+  }, [trackStages, store.records]);
+
+  const subjectStyle = getSubjectStyle(activeSubject);
+
   return (
-    <main className="max-w-5xl mx-auto px-4 py-6 sm:py-10 space-y-8">
-      {/* HERO SIMPLE & CRÉATIF */}
-      <section className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-        <div className="space-y-3 max-w-2xl">
-          <div className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 border border-indigo-200 px-3 py-1 text-xs font-semibold text-indigo-700">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Programme officiel des examens au Maroc</span>
+    <main className="max-w-5xl mx-auto px-4 py-6 sm:py-8 space-y-7">
+      {/* BANDEAU COMPÉTITION & DÉFI DU JOUR */}
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Carte Ligue & Classement */}
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 flex flex-col justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold ${league.badgeBg} ${league.colorClass}`}
+              >
+                <span>{league.emoji}</span>
+                <span>{league.name}</span>
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2.5 py-1 text-xs font-bold text-amber-700">
+                <Flame className="w-3.5 h-3.5" />
+                {streak} jour{streak > 1 ? 's' : ''}
+              </span>
+            </div>
+
+            <Link
+              href="/classement"
+              className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:underline"
+            >
+              <Trophy className="w-3.5 h-3.5" />
+              <span>Rang #{rankInfo.userRank} ({activeLevelInfo.shortLabel})</span>
+            </Link>
           </div>
 
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">
-            Révise tes examens activement avec des quiz corrigés et suis ta note sur 20.
-          </h1>
+          <div className="space-y-1.5">
+            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+              Franchis les 10 niveaux jusqu’au Boss Examen National !
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-600">
+              {rankInfo.xpToNext && rankInfo.nextRivalName ? (
+                <>
+                  Encore <strong className="text-indigo-700">+{rankInfo.xpToNext} XP</strong> pour
+                  dépasser <strong>{rankInfo.nextRivalName}</strong> au classement{' '}
+                  {activeLevelInfo.shortLabel} !
+                </>
+              ) : (
+                <>Tu es en tête du classement {activeLevelInfo.shortLabel} ! Garde ton avance.</>
+              )}
+            </p>
+          </div>
 
-          <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
-            Choisis ton niveau, entraîne-toi par chapitre avec les pièges d’examen expliqués, et
-            repère immédiatement les notions à revoir avant le jour J.
-          </p>
+          <div className="flex flex-wrap items-center gap-2.5 pt-1">
+            {nextRecommendedStage && (
+              <Link
+                href={`/quiz/${nextRecommendedStage.slug}`}
+                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 hover:bg-indigo-600 text-white text-xs sm:text-sm font-bold px-4 py-2.5 transition-colors"
+              >
+                <Play className="w-4 h-4 fill-current" />
+                <span>
+                  Jouer Niveau {nextRecommendedStage.stage_number} ({activeSubject})
+                </span>
+              </Link>
+            )}
+            <Link
+              href="/classement"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800 text-xs sm:text-sm font-semibold px-4 py-2.5 transition-colors"
+            >
+              <Trophy className="w-4 h-4 text-amber-600" />
+              <span>Voir le classement</span>
+            </Link>
+          </div>
         </div>
 
-        {/* Mini carte Progression en direct */}
-        <div className="shrink-0 w-full lg:w-72 rounded-2xl bg-slate-50 border border-slate-200 p-4 space-y-3">
+        {/* Carte Défi du Jour */}
+        <div
+          className={`rounded-2xl border p-5 flex flex-col justify-between gap-3 ${
+            dailyDone
+              ? 'bg-emerald-50/70 border-emerald-200'
+              : 'bg-indigo-50/60 border-indigo-200'
+          }`}
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Ton tableau ({activeLevelInfo.shortLabel})
+            <span
+              className={`text-xs font-extrabold uppercase tracking-wider ${
+                dailyDone ? 'text-emerald-700' : 'text-indigo-700'
+              }`}
+            >
+              Défi du Jour
             </span>
-            <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-700">
-              <Flame className="w-3.5 h-3.5" />
-              {levelStats.streak} j
+            <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-0.5 text-xs font-extrabold text-indigo-700 border border-indigo-200">
+              <Sparkles className="w-3 h-3" />
+              +100 XP
             </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-2.5">
-            <div className="bg-white rounded-xl border border-slate-200 p-2.5">
-              <p className="text-[11px] text-slate-500">Note estimée</p>
-              <p className="text-lg font-extrabold text-slate-900 tabular-nums">
-                {levelStats.avg20 === null ? '— / 20' : `${formatScore20(levelStats.avg20)}/20`}
-              </p>
-            </div>
-            <div className="bg-white rounded-xl border border-slate-200 p-2.5">
-              <p className="text-[11px] text-slate-500">Chapitres faits</p>
-              <p className="text-lg font-extrabold text-slate-900 tabular-nums">
-                {levelStats.completed} / {levelStats.total}
-              </p>
-            </div>
+          <div className="space-y-1">
+            <p className="text-sm font-bold text-slate-900">
+              {dailyDone
+                ? 'Défi accompli aujourd’hui !'
+                : 'Obtiens au moins 14 / 20 sur un niveau'}
+            </p>
+            <p className="text-xs text-slate-600">
+              {dailyDone
+                ? 'Tu as remporté ton bonus +100 XP. Reviens demain pour garder ta série !'
+                : 'Valide n’importe quel niveau avec 14/20 ou plus pour décrocher le bonus.'}
+            </p>
           </div>
 
-          <Link
-            href="/progression"
-            className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 hover:bg-indigo-600 text-white text-xs font-semibold py-2.5 px-3 transition-colors"
-          >
-            <TrendingUp className="w-3.5 h-3.5" />
-            <span>Voir ma progression complète</span>
-          </Link>
+          <div className="flex items-center gap-2 text-xs font-bold">
+            {dailyDone ? (
+              <span className="inline-flex items-center gap-1.5 text-emerald-700">
+                <CheckCircle2 className="w-4 h-4" />
+                Bonus +100 XP validé
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 text-indigo-700">
+                <Award className="w-4 h-4" />
+                En cours — 0 / 1 réussi
+              </span>
+            )}
+          </div>
         </div>
       </section>
 
-      {/* SÉLECTEUR DES 4 NIVEAUX OFFICIELS */}
+      {/* 1. SÉLECTEUR DES 4 NIVEAUX SCOLAIRES */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500">
-            1. Choisis ton niveau scolaire
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+            1. Ton niveau scolaire
           </h2>
-          <span className="text-xs text-slate-500">{quizzes.length} quiz disponibles</span>
+          <span className="text-xs text-slate-500">
+            Sources : Programme Officiel &amp; Annales Maroc
+          </span>
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {LEVELS.map((lvl) => {
             const isSelected = store.selectedLevel === lvl.id;
-            const count = quizzes.filter((q) => q.level === lvl.id).length;
-
             return (
               <button
                 key={lvl.id}
                 type="button"
                 onClick={() => handleLevelSwitch(lvl.id)}
-                className={`text-left rounded-2xl p-4 border transition-all ${
+                className={`text-left rounded-2xl p-3.5 sm:p-4 border transition-all ${
                   isSelected
                     ? 'bg-slate-900 border-slate-900 text-white shadow-sm'
                     : 'bg-white border-slate-200 text-slate-900 hover:border-slate-300'
                 }`}
               >
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <span
-                    className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                      isSelected
-                        ? 'bg-white/15 text-white'
-                        : `${lvl.accentBg} ${lvl.accentText}`
-                    }`}
-                  >
-                    {lvl.examTitle}
-                  </span>
-                  <span
-                    className={`text-xs font-semibold ${
-                      isSelected ? 'text-slate-300' : 'text-slate-400'
-                    }`}
-                  >
-                    {count} quiz
-                  </span>
-                </div>
-                <p className="text-base font-extrabold">{lvl.label}</p>
-                <p
-                  className={`text-xs mt-1 line-clamp-2 ${
-                    isSelected ? 'text-slate-300' : 'text-slate-500'
+                <span
+                  className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full mb-1.5 ${
+                    isSelected
+                      ? 'bg-white/15 text-white'
+                      : `${lvl.accentBg} ${lvl.accentText}`
                   }`}
                 >
-                  {lvl.description}
-                </p>
+                  {lvl.examTitle}
+                </span>
+                <p className="text-sm sm:text-base font-extrabold">{lvl.label}</p>
               </button>
             );
           })}
         </div>
       </section>
 
-      {/* CATALOGUE DES QUIZ PAR MATIÈRE */}
-      <section className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <h2 className="text-lg font-bold text-slate-900">
-            2. Quiz {activeLevelInfo.label} — {activeLevelInfo.examTitle}
-          </h2>
+      {/* 2. PARCOURS INTERACTIF 10 NIVEAUX PAR MATIÈRE */}
+      <section className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 space-y-6">
+        {/* Barre supérieure : Matières + Étoiles + Mode Accès Libre */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+          <div className="flex flex-wrap items-center gap-2">
+            {subjects.map((subject) => {
+              const active = subject === activeSubject;
+              return (
+                <button
+                  key={subject}
+                  type="button"
+                  onClick={() => setSelectedSubject(subject)}
+                  className={`rounded-xl px-3.5 py-2 text-xs sm:text-sm font-bold border transition-all ${
+                    active
+                      ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
+                      : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  {subject}
+                </button>
+              );
+            })}
+          </div>
 
-          <div className="relative w-full sm:w-64">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Chercher un chapitre..."
-              className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200 px-3 py-1 text-xs font-extrabold text-amber-800">
+              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
+              {trackStats.earnedStars} / {trackStats.maxStars} étoiles
+            </span>
+
+            <button
+              type="button"
+              onClick={handleFreeAccessToggle}
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-colors ${
+                store.freeAccess
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                  : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              {store.freeAccess ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
+              <span>{store.freeAccess ? 'Accès libre actif' : 'Débloquer tout'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Barre d'avancement du parcours */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-xs font-semibold text-slate-600">
+            <span>
+              Parcours {activeSubject} ({activeLevelInfo.label}) — du Niveau 1 (Bases) au Niveau 10
+              (Boss Examen)
+            </span>
+            <span className="font-bold text-slate-900">
+              {trackStats.passedCount} / {trackStats.total} validés
+            </span>
+          </div>
+          <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-300 ${subjectStyle.bar}`}
+              style={{
+                width: `${
+                  trackStats.total > 0
+                    ? Math.round((trackStats.passedCount / trackStats.total) * 100)
+                    : 0
+                }%`,
+              }}
             />
           </div>
         </div>
 
-        {/* Filtres par matière */}
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setSelectedSubject('ALL')}
-            className={`rounded-full px-3.5 py-1.5 text-xs font-semibold border transition-colors ${
-              selectedSubject === 'ALL'
-                ? 'bg-slate-900 border-slate-900 text-white'
-                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            Toutes les matières ({levelQuizzes.length})
-          </button>
+        {/* GRILLE INTERACTIVE DES 10 NIVEAUX */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          {trackStages.map((stage, idx) => {
+            const unlocked = isStageUnlocked(idx);
+            const rec = store.records[stage.slug];
+            const isBoss = stage.stage_number === 10;
+            const isCurrent = nextRecommendedStage?.slug === stage.slug;
+            const stars = rec?.stars || 0;
 
-          {subjects.map((subject) => {
-            const active = selectedSubject === subject;
+            const diffPill =
+              stage.difficulty === 'Facile'
+                ? 'bg-emerald-50 text-emerald-700'
+                : stage.difficulty === 'Moyen'
+                ? 'bg-blue-50 text-blue-700'
+                : stage.difficulty === 'Difficile'
+                ? 'bg-orange-50 text-orange-700'
+                : 'bg-slate-900 text-amber-300';
+
             return (
-              <button
-                key={subject}
-                type="button"
-                onClick={() => setSelectedSubject(subject)}
-                className={`rounded-full px-3.5 py-1.5 text-xs font-semibold border transition-colors ${
-                  active
-                    ? 'bg-indigo-600 border-indigo-600 text-white'
-                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+              <div
+                key={stage.slug}
+                className={`relative rounded-2xl border p-4 flex flex-col justify-between gap-3.5 transition-all ${
+                  !unlocked
+                    ? 'bg-slate-50/80 border-slate-200 opacity-75'
+                    : isBoss
+                    ? 'bg-gradient-to-br from-slate-900 to-indigo-950 border-slate-800 text-white'
+                    : isCurrent
+                    ? `bg-white border-indigo-400 ring-2 ${subjectStyle.ring}/20 shadow-sm`
+                    : 'bg-white border-slate-200 hover:border-slate-300'
                 }`}
               >
-                {subject}
-              </button>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-extrabold ${
+                          isBoss
+                            ? 'bg-amber-400 text-slate-950'
+                            : unlocked
+                            ? 'bg-slate-900 text-white'
+                            : 'bg-slate-200 text-slate-500'
+                        }`}
+                      >
+                        {isBoss ? <Crown className="w-4 h-4" /> : stage.stage_number}
+                      </span>
+
+                      <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${diffPill}`}>
+                        Niveau {stage.stage_number} • {stage.difficulty}
+                      </span>
+                    </div>
+
+                    {/* 3 Étoiles */}
+                    <div className="flex items-center gap-0.5" aria-label={`${stars} étoiles sur 3`}>
+                      {[1, 2, 3].map((n) => (
+                        <Star
+                          key={n}
+                          className={`w-4 h-4 ${
+                            n <= stars
+                              ? 'fill-amber-400 text-amber-400'
+                              : isBoss
+                              ? 'text-slate-700'
+                              : 'text-slate-200'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <h3
+                    className={`text-sm sm:text-base font-bold leading-snug ${
+                      isBoss ? 'text-white' : 'text-slate-900'
+                    }`}
+                  >
+                    {stage.chapter_title}
+                  </h3>
+
+                  <p
+                    className={`text-xs leading-relaxed ${
+                      isBoss ? 'text-slate-300' : 'text-slate-500'
+                    }`}
+                  >
+                    {stage.description}
+                  </p>
+
+                  {stage.exam_source && (
+                    <span
+                      className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                        isBoss
+                          ? 'bg-white/10 text-amber-200'
+                          : 'bg-indigo-50 text-indigo-700 border border-indigo-100'
+                      }`}
+                    >
+                      📄 {stage.exam_source}
+                    </span>
+                  )}
+                </div>
+
+                <div
+                  className={`pt-3 border-t flex items-center justify-between gap-2 ${
+                    isBoss ? 'border-white/10' : 'border-slate-100'
+                  }`}
+                >
+                  <span className={`text-xs font-semibold ${isBoss ? 'text-slate-300' : 'text-slate-500'}`}>
+                    {rec ? (
+                      <>
+                        Record :{' '}
+                        <strong className={isBoss ? 'text-amber-300' : 'text-slate-900'}>
+                          {formatScore20(rec.bestScore20)}/20
+                        </strong>
+                      </>
+                    ) : (
+                      `${stage.questions.length} QCM • ~${stage.estimated_minutes} min`
+                    )}
+                  </span>
+
+                  {unlocked ? (
+                    <Link
+                      href={`/quiz/${stage.slug}`}
+                      className={`inline-flex items-center gap-1.5 rounded-xl text-xs font-bold px-3.5 py-2 transition-colors ${
+                        isBoss
+                          ? 'bg-amber-400 hover:bg-amber-300 text-slate-950'
+                          : isCurrent
+                          ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                          : 'bg-slate-900 hover:bg-indigo-600 text-white'
+                      }`}
+                    >
+                      <span>{rec ? 'Améliorer' : isBoss ? 'Affronter le Boss' : 'Jouer'}</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-xl bg-slate-200/80 text-slate-500 text-xs font-semibold px-3 py-2">
+                      <Lock className="w-3.5 h-3.5" />
+                      <span>Valide Niv. {stage.stage_number - 1}</span>
+                    </span>
+                  )}
+                </div>
+              </div>
             );
           })}
         </div>
-
-        {/* Grille des cartes de quiz */}
-        {filteredQuizzes.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-10 text-center text-sm text-slate-500">
-            Aucun quiz ne correspond à votre recherche.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredQuizzes.map((quiz) => {
-              const rec = store.records[quiz.slug];
-              const style = getSubjectStyle(quiz.subject);
-              const masteryBadge = !rec ? (
-                <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                  Nouveau
-                </span>
-              ) : rec.bestScore20 >= 14 ? (
-                <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  <CheckCircle2 className="w-3 h-3" />
-                  Maîtrisé • {formatScore20(rec.bestScore20)}/20
-                </span>
-              ) : rec.bestScore20 >= 12 ? (
-                <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                  Acquis • {formatScore20(rec.bestScore20)}/20
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200">
-                  <Target className="w-3 h-3" />
-                  À revoir • {formatScore20(rec.bestScore20)}/20
-                </span>
-              );
-
-              return (
-                <article
-                  key={quiz.slug}
-                  className="bg-white rounded-2xl border border-slate-200 hover:border-indigo-300 p-5 flex flex-col justify-between gap-4 transition-colors"
-                >
-                  <div className="space-y-2.5">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span
-                        className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${style.bg} ${style.text}`}
-                      >
-                        {quiz.subject}
-                      </span>
-                      {masteryBadge}
-                    </div>
-
-                    <h3 className="text-base font-bold text-slate-900 leading-snug">
-                      {quiz.chapter_title}
-                    </h3>
-
-                    <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                      {quiz.description}
-                    </p>
-                  </div>
-
-                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 text-xs text-slate-500">
-                      <span className="inline-flex items-center gap-1">
-                        <HelpCircle className="w-3.5 h-3.5" />
-                        {quiz.questions.length} QCM
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <Clock className="w-3.5 h-3.5" />~{quiz.estimated_minutes} min
-                      </span>
-                    </div>
-
-                    <Link
-                      href={`/quiz/${quiz.slug}`}
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 hover:bg-indigo-600 text-white text-xs sm:text-sm font-semibold px-4 py-2 transition-colors"
-                    >
-                      <span>{rec ? 'Rejouer' : 'Commencer'}</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </Link>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        )}
       </section>
     </main>
   );

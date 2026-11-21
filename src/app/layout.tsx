@@ -23,6 +23,9 @@ export default function RootLayout({
           <div className="max-w-5xl mx-auto px-4 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
             <p>© {new Date().getFullYear()} ExamQuiz.ma — Entraînement aux examens scolaires au Maroc.</p>
             <div className="flex items-center gap-4">
+              <Link href="/classement" className="hover:text-slate-900">
+                Classement
+              </Link>
               <Link href="/progression" className="hover:text-slate-900">
                 Ma progression
               </Link>
