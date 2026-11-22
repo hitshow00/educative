@@ -360,6 +360,22 @@ export function QuizPlayer({ quiz, nextStage }: QuizPlayerProps) {
               <Trophy className="w-4 h-4 text-amber-500" />
               <span>{t.qSeeMyRank}</span>
             </Link>
+
+            <a
+              href={`https://wa.me/?text=${encodeURIComponent(
+                lang === 'ar'
+                  ? `حصلت على ${formatScore20(finalScore20)}/20 في المستوى ${quiz.stage_number} (${translateSubject(
+                      quiz.subject,
+                      'ar'
+                    )}) على ExamQuiz.ma! هل تستطيع التفوق على نقطتي؟ https://educative-nine.vercel.app/quiz/${quiz.slug}`
+                  : `J’ai obtenu ${formatScore20(finalScore20)}/20 au Niveau ${quiz.stage_number} (${quiz.subject}) sur ExamQuiz.ma ! Essaie de battre mon score : https://educative-nine.vercel.app/quiz/${quiz.slug}`
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm px-5 py-3 transition-colors"
+            >
+              <span>{lang === 'ar' ? '📲 تحدى صديقك عبر واتساب' : '📲 Défier un ami sur WhatsApp'}</span>
+            </a>
           </div>
         </section>
 

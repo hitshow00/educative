@@ -108,6 +108,86 @@ export function toggleFreeAccess(): ProgressStore {
   return store;
 }
 
+const MISSIONS_KEY = 'taalim_daily_missions_v1';
+
+export interface DailyMissionsState {
+  date: string;
+  summaryRead: boolean;
+  flashcardsDone: boolean;
+}
+
+export function loadDailyMissions(): DailyMissionsState {
+  const today = todayIso();
+  if (typeof window === 'undefined') {
+    return { date: today, summaryRead: false, flashcardsDone: false };
+  }
+  try {
+    const raw = window.localStorage.getItem(MISSIONS_KEY);
+    if (!raw) return { date: today, summaryRead: false, flashcardsDone: false };
+    const parsed = JSON.parse(raw) as DailyMissionsState;
+    if (parsed.date !== today) {
+      return { date: today, summaryRead: false, flashcardsDone: false };
+    }
+    return parsed;
+  } catch {
+    return { date: today, summaryRead: false, flashcardsDone: false };
+  }
+}
+
+export function markMissionSummaryRead(): { awardedXp: number } {
+  if (typeof window === 'undefined') return { awardedXp: 0 };
+  const missions = loadDailyMissions();
+  if (missions.summaryRead) return { awardedXp: 0 };
+
+  missions.summaryRead = true;
+  window.localStorage.setItem(MISSIONS_KEY, JSON.stringify(missions));
+
+  const store = loadProgress();
+  store.xp += 30;
+  const today = todayIso();
+  if (!store.activeDays.includes(today)) store.activeDays.push(today);
+  saveProgress(store);
+  return { awardedXp: 30 };
+}
+
+export function markMissionFlashcardsDone(): { awardedXp: number } {
+  if (typeof window === 'undefined') return { awardedXp: 0 };
+  const missions = loadDailyMissions();
+  if (missions.flashcardsDone) return { awardedXp: 0 };
+
+  missions.flashcardsDone = true;
+  window.localStorage.setItem(MISSIONS_KEY, JSON.stringify(missions));
+
+  const store = loadProgress();
+  store.xp += 40;
+  const today = todayIso();
+  if (!store.activeDays.includes(today)) store.activeDays.push(today);
+  saveProgress(store);
+  return { awardedXp: 40 };
+}
+
+/**
+ * Calcule le nombre de jours restants jusqu'à la prochaine session officielle des examens de Juin au Maroc.
+ */
+export function getDaysUntilMoroccanExam(level: LevelId): { days: number; targetLabelFr: string; targetLabelAr: string } {
+  const now = new Date();
+  const examDay = level === '2bac' ? 10 : level === '1bac' ? 4 : level === '3ac' ? 16 : 22;
+  let year = now.getFullYear();
+  let target = new Date(year, 5, examDay); // Mois 5 = Juin
+  if (target.getTime() < now.getTime()) {
+    year += 1;
+    target = new Date(year, 5, examDay);
+  }
+  const diffMs = target.getTime() - now.getTime();
+  const days = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+
+  return {
+    days,
+    targetLabelFr: `Juin ${year}`,
+    targetLabelAr: `يونيو ${year}`,
+  };
+}
+
 export function recordAttempt(params: {
   quiz: Quiz;
   correctCount: number;

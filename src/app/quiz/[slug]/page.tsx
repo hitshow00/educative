@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getNextStageQuiz, getQuizBySlug } from '@/lib/quizzes';
-import { QuizPlayer } from './QuizPlayer';
+import { getStudyPackForQuiz } from '@/data/study-content';
+import { LessonHub } from '@/components/LessonHub';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,6 +27,7 @@ export default async function QuizPage({ params }: QuizPageProps) {
   if (!quiz) notFound();
 
   const nextStage = await getNextStageQuiz(quiz);
+  const studyPack = getStudyPackForQuiz(quiz);
 
-  return <QuizPlayer quiz={quiz} nextStage={nextStage} />;
+  return <LessonHub quiz={quiz} nextStage={nextStage} studyPack={studyPack} />;
 }

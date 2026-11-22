@@ -27,12 +27,16 @@ import {
   buildLeaderboard,
   computeStreak,
   formatScore20,
+  getDaysUntilMoroccanExam,
   getDefaultStore,
+  loadDailyMissions,
   loadProgress,
   setSelectedLevel,
   todayIso,
   toggleFreeAccess,
+  type DailyMissionsState,
 } from '@/lib/progress';
+import { AiTutorWidget } from '@/components/AiTutorWidget';
 import { useLanguage } from '@/components/LanguageProvider';
 import {
   LEVEL_AR,
@@ -49,10 +53,18 @@ interface HomeClientProps {
 export function HomeClient({ quizzes }: HomeClientProps) {
   const { lang, t } = useLanguage();
   const [store, setStore] = useState<ProgressStore>(getDefaultStore);
+  const [missions, setMissions] = useState<DailyMissionsState>({
+    date: '',
+    summaryRead: false,
+    flashcardsDone: false,
+  });
   const [selectedSubject, setSelectedSubject] = useState<string>('');
 
   useEffect(() => {
-    const sync = () => setStore(loadProgress());
+    const sync = () => {
+      setStore(loadProgress());
+      setMissions(loadDailyMissions());
+    };
     sync();
     window.addEventListener('examquiz-progress', sync);
     return () => window.removeEventListener('examquiz-progress', sync);
@@ -117,6 +129,12 @@ export function HomeClient({ quizzes }: HomeClientProps) {
   );
   const dailyDone = store.dailyChallengeDoneDate === todayIso();
   const streak = computeStreak(store.activeDays);
+  const countdown = useMemo(
+    () => getDaysUntilMoroccanExam(store.selectedLevel),
+    [store.selectedLevel]
+  );
+  const completedMissionsCount =
+    (missions.summaryRead ? 1 : 0) + (missions.flashcardsDone ? 1 : 0) + (dailyDone ? 1 : 0);
 
   function handleLevelSwitch(level: LevelId) {
     setStore(setSelectedLevel(level));
@@ -221,52 +239,51 @@ export function HomeClient({ quizzes }: HomeClientProps) {
           </div>
         </div>
 
-        {/* Carte Défi du Jour */}
-        <div
-          className={`rounded-2xl border p-5 flex flex-col justify-between gap-3 ${
-            dailyDone
-              ? 'bg-emerald-50/70 border-emerald-200'
-              : 'bg-indigo-50/60 border-indigo-200'
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span
-              className={`text-xs font-extrabold uppercase tracking-wider ${
-                dailyDone ? 'text-emerald-700' : 'text-indigo-700'
-              }`}
-            >
-              {t.dailyChallenge}
+        {/* Carte 3 Missions du Jour + Compte à rebours J-X */}
+        <div className="rounded-2xl border border-indigo-200 bg-indigo-50/50 p-5 flex flex-col justify-between gap-3">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-extrabold uppercase tracking-wider text-indigo-700">
+              {lang === 'ar' ? 'مهام اليوم (3)' : '3 Missions du Jour'}
             </span>
             <span
               dir="ltr"
-              className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-0.5 text-xs font-extrabold text-indigo-700 border border-indigo-200"
+              className="inline-flex items-center gap-1 rounded-full bg-slate-900 text-amber-300 px-2.5 py-0.5 text-[11px] font-extrabold"
             >
-              <Sparkles className="w-3 h-3" />
-              +100 XP
+              ⏳ J-{countdown.days} ({lang === 'ar' ? countdown.targetLabelAr : countdown.targetLabelFr})
             </span>
           </div>
 
-          <div className="space-y-1">
-            <p className="text-sm font-bold text-slate-900">
-              {dailyDone ? t.dailyDoneTitle : t.dailyTodoTitle}
-            </p>
-            <p className="text-xs text-slate-600">
-              {dailyDone ? t.dailyDoneDesc : t.dailyTodoDesc}
-            </p>
-          </div>
+          <ul className="space-y-2 text-xs">
+            <li className="flex items-center justify-between gap-2">
+              <span className={missions.summaryRead ? 'line-through text-emerald-700 font-semibold' : 'text-slate-700 font-medium'}>
+                {missions.summaryRead ? '✅' : '⬜'}{' '}
+                {lang === 'ar' ? 'قراءة ملخص درس' : 'Lire 1 résumé de cours'}
+              </span>
+              <span className="font-bold text-indigo-700" dir="ltr">+30 XP</span>
+            </li>
+            <li className="flex items-center justify-between gap-2">
+              <span className={missions.flashcardsDone ? 'line-through text-emerald-700 font-semibold' : 'text-slate-700 font-medium'}>
+                {missions.flashcardsDone ? '✅' : '⬜'}{' '}
+                {lang === 'ar' ? 'مراجعة سلسلة بطاقات' : 'Réviser 1 série Flashcards'}
+              </span>
+              <span className="font-bold text-indigo-700" dir="ltr">+40 XP</span>
+            </li>
+            <li className="flex items-center justify-between gap-2">
+              <span className={dailyDone ? 'line-through text-emerald-700 font-semibold' : 'text-slate-700 font-medium'}>
+                {dailyDone ? '✅' : '⬜'}{' '}
+                {lang === 'ar' ? 'اختبار ≥ 14/20' : 'Réussir 1 Quiz ≥ 14/20'}
+              </span>
+              <span className="font-bold text-indigo-700" dir="ltr">+100 XP</span>
+            </li>
+          </ul>
 
-          <div className="flex items-center gap-2 text-xs font-bold">
-            {dailyDone ? (
-              <span className="inline-flex items-center gap-1.5 text-emerald-700">
-                <CheckCircle2 className="w-4 h-4" />
-                {t.dailyDoneBadge}
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 text-indigo-700">
-                <Award className="w-4 h-4" />
-                {t.dailyTodoBadge}
-              </span>
-            )}
+          <div className="pt-1 flex items-center justify-between text-[11px] font-bold">
+            <span className={completedMissionsCount === 3 ? 'text-emerald-700' : 'text-indigo-700'}>
+              {completedMissionsCount} / 3 {lang === 'ar' ? 'مكتملة' : 'complétées'}
+            </span>
+            <Link href="/cours" className="text-indigo-700 hover:underline">
+              {lang === 'ar' ? 'فتح الملخصات ←' : 'Ouvrir les résumés →'}
+            </Link>
           </div>
         </div>
       </section>
@@ -541,6 +558,8 @@ export function HomeClient({ quizzes }: HomeClientProps) {
           })}
         </div>
       </section>
+
+      <AiTutorWidget level={activeLevelInfo.label} subject={activeSubject} />
     </main>
   );
 }
