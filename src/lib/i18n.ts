@@ -119,7 +119,8 @@ export const UI_TEXT = {
   fr: {
     brandSub: 'Arène Examens Maroc',
     navRoadmap: 'Parcours',
-    navCourses: 'Cours',
+    navCourses: 'Résumés',
+    navLibrary: 'PDF Officiels',
     navLeaderboard: 'Classement',
     navProgress: 'Progrès',
     navReview: 'À revoir',
@@ -233,6 +234,7 @@ export const UI_TEXT = {
     brandSub: 'ساحة الامتحانات بالمغرب',
     navRoadmap: 'المسار',
     navCourses: 'الملخصات',
+    navLibrary: 'المكتبة PDF',
     navLeaderboard: 'الترتيب',
     navProgress: 'التقدم',
     navReview: 'للمراجعة',

@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import {
   BookOpenCheck,
   Flame,
+  FolderOpen,
   GraduationCap,
   Languages,
   RotateCcw,
@@ -49,6 +50,7 @@ export function Navbar() {
   const navItems = [
     { href: '/', label: t.navRoadmap, icon: BookOpenCheck },
     { href: '/cours', label: t.navCourses, icon: GraduationCap },
+    { href: '/bibliotheque', label: t.navLibrary, icon: FolderOpen },
     { href: '/classement', label: t.navLeaderboard, icon: Trophy },
     { href: '/progression', label: t.navProgress, icon: TrendingUp },
     { href: '/a-revoir', label: t.navReview, icon: RotateCcw },

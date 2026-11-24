@@ -17,6 +17,7 @@ import type { Quiz } from '@/types/quiz';
 import type { CourseSummary } from '@/data/study-content';
 import { QuizPlayer } from '@/app/quiz/[slug]/QuizPlayer';
 import { AiTutorWidget } from '@/components/AiTutorWidget';
+import { RelatedOfficialDocs } from '@/components/RelatedOfficialDocs';
 import { useLanguage } from '@/components/LanguageProvider';
 import {
   markMissionFlashcardsDone,
@@ -402,6 +403,13 @@ export function LessonHub({ quiz, nextStage, studyPack }: LessonHubProps) {
           </section>
         </main>
       )}
+
+      {/* Documents Officiels PDF liés à cette matière */}
+      <RelatedOfficialDocs
+        level={quiz.level}
+        subject={quiz.subject}
+        chapterTitle={quiz.chapter_title}
+      />
 
       {/* Agent Prof IA contextuel */}
       <AiTutorWidget

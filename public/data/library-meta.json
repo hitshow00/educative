@@ -1,0 +1,82 @@
+{
+  "generatedAt": "2026-11-24T15:57:42.135Z",
+  "totalFiles": 12659,
+  "levels": {
+    "2bac": {
+      "count": 4869,
+      "subjects": {
+        "Mathématiques": 1943,
+        "Physique-Chimie": 1396,
+        "SVT": 484,
+        "Autres Matières": 494,
+        "Sciences de l'Ingénieur": 492,
+        "Anglais": 31,
+        "Arabe": 29
+      },
+      "categories": {
+        "Contrôles": 1143,
+        "Examens": 1998,
+        "Cours": 905,
+        "Exercices": 361,
+        "Résumés": 462
+      }
+    },
+    "1bac": {
+      "count": 2546,
+      "subjects": {
+        "Autres Matières": 93,
+        "Mathématiques": 1007,
+        "Physique-Chimie": 1090,
+        "SVT": 177,
+        "Sciences de l'Ingénieur": 179
+      },
+      "categories": {
+        "Contrôles": 828,
+        "Examens": 566,
+        "Cours": 600,
+        "Exercices": 274,
+        "Résumés": 278
+      }
+    },
+    "3ac": {
+      "count": 3605,
+      "subjects": {
+        "Autres Matières": 548,
+        "Histoire-Géographie": 202,
+        "Éducation Islamique": 186,
+        "Mathématiques": 811,
+        "Physique-Chimie": 936,
+        "Anglais": 51,
+        "Arabe": 257,
+        "Français": 246,
+        "SVT": 368
+      },
+      "categories": {
+        "Contrôles": 1043,
+        "Examens": 1399,
+        "Cours": 672,
+        "Résumés": 240,
+        "Exercices": 251
+      }
+    },
+    "6eme": {
+      "count": 1639,
+      "subjects": {
+        "Histoire-Géographie": 57,
+        "Éducation Islamique": 47,
+        "Autres Matières": 3,
+        "Mathématiques": 556,
+        "Arabe": 357,
+        "Français": 548,
+        "Activité Scientifique": 71
+      },
+      "categories": {
+        "Contrôles": 145,
+        "Examens": 1222,
+        "Cours": 217,
+        "Exercices": 6,
+        "Résumés": 49
+      }
+    }
+  }
+}
